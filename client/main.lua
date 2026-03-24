@@ -1,79 +1,47 @@
 --[[
-    d4rk_prop_tool - client/main.lua
+    d4rk_prop_tool - client/main.lua  v2.0
     Prop Attachment & Animation Testing Tool
-    Abhaengigkeiten: ox_lib
+    Abhaengigkeiten: ox_lib, config.lua
 --]]
 
 local dataview = require 'client.dataview'
 
 -- ─────────────────────────────────────────────
---  Knochen-Lookup-Table
--- ─────────────────────────────────────────────
-local BONES = {
-    { name = 'SKEL_R_Hand',     id = 28422 },
-    { name = 'SKEL_L_Hand',     id = 57005 },
-    { name = 'SKEL_R_Forearm',  id = 61007 },
-    { name = 'SKEL_L_Forearm',  id = 63931 },
-    { name = 'SKEL_Spine2',     id = 24818 },
-    { name = 'SKEL_R_UpperArm', id = 40269 },
-    { name = 'SKEL_L_UpperArm', id = 45509 },
-    { name = 'IK_R_Hand',       id = 36029 },
-    { name = 'IK_L_Hand',       id = 65245 },
-    { name = 'PH_R_Hand',       id = 26613 },
-    { name = 'PH_L_Hand',       id = 18905 },
-}
-
--- ─────────────────────────────────────────────
 --  State
 -- ─────────────────────────────────────────────
-local currentProp = nil
-local currentAnim = nil
-local stepSize    = 0.01
 
-local attachment = {
-    prop     = '',
-    bone     = 'SKEL_R_Hand',
-    boneId   = 28422,
-    offset   = { x = 0.0, y = 0.0, z = 0.0 },
-    rotation = { x = 0.0, y = 0.0, z = 0.0 },
-    animDict = '',
-    animClip = '',
-    notes    = '',
+local uiOpen = false
+
+local props = {
+    [1] = { entity=nil, model='', bone='SKEL_R_Hand', boneId=28422, rotOrder=1,
+            offset={x=0.0,y=0.0,z=0.0}, rotation={x=0.0,y=0.0,z=0.0} },
+    [2] = { entity=nil, model='', bone='SKEL_L_Hand', boneId=57005, rotOrder=1,
+            offset={x=0.0,y=0.0,z=0.0}, rotation={x=0.0,y=0.0,z=0.0} },
 }
 
--- ─────────────────────────────────────────────
---  Hilfsfunktionen
--- ─────────────────────────────────────────────
+local currentAnim = nil
+local moveSpeed   = Config.DefaultMoveSpeed   or 0.01
+local rotateSpeed = Config.DefaultRotateSpeed or 1.0
 
-local function getBoneId(boneName)
-    for _, b in ipairs(BONES) do
-        if b.name == boneName then return b.id end
-    end
-    return nil
-end
+local cam     = nil
+local camData = { dist=2.5, angle=0.0, height=0.5, focus='ped' }
 
--- Lokaler Cache der Attachments (wird vom Server geladen)
+local gizmoActive    = false
+local gizmoEnabled   = false
+local gizmoMode      = 'Translate'
+local gizmoRelative  = false
+local gizmoCursor    = false
+local gizmoCancelled = false
+
+local WHEEL_STEP = 0.05
+local MIN_SCALE  = 0.05
+local MAX_SCALE  = 50.0
+
 local cachedAttachments = {}
 
-local function loadAttachments()
-    return cachedAttachments
-end
-
-local function saveAttachments(data)
-    cachedAttachments = data
-    TriggerServerEvent('d4rk_prop_tool:saveAttachments', json.encode(data, { indent = true }))
-end
-
--- Beim Laden des Scripts einmalig vom Server holen
-AddEventHandler('d4rk_prop_tool:receiveAttachments', function(raw)
-    local ok, data = pcall(json.decode, raw)
-    cachedAttachments = ok and data or {}
-end)
-
-CreateThread(function()
-    Wait(500)  -- kurz warten bis Server bereit
-    TriggerServerEvent('d4rk_prop_tool:loadAttachments')
-end)
+-- ─────────────────────────────────────────────
+--  Helpers
+-- ─────────────────────────────────────────────
 
 local function requestModel(modelName)
     local model = joaat(modelName)
@@ -98,73 +66,119 @@ local function requestAnimDict(dict)
     return true
 end
 
-local function removeProp()
-    if currentProp and DoesEntityExist(currentProp) then
-        DeleteEntity(currentProp)
+local function attachProp(slot)
+    local p = props[slot]
+    if not p.entity or not DoesEntityExist(p.entity) then return end
+    local ped = PlayerPedId()
+    AttachEntityToEntity(
+        p.entity, ped,
+        GetPedBoneIndex(ped, p.boneId),
+        p.offset.x, p.offset.y, p.offset.z,
+        p.rotation.x, p.rotation.y, p.rotation.z,
+        true, true, false, true, p.rotOrder, true
+    )
+end
+
+local function deleteProp(slot)
+    local p = props[slot]
+    if p.entity and DoesEntityExist(p.entity) then
+        DeleteEntity(p.entity)
     end
-    currentProp = nil
+    p.entity = nil
 end
 
 local function stopAnim()
     if currentAnim then
-        local ped = PlayerPedId()
-        StopAnimTask(ped, currentAnim.dict, currentAnim.clip, 1.0)
+        StopAnimTask(PlayerPedId(), currentAnim.dict, currentAnim.clip, 1.0)
         currentAnim = nil
     end
 end
 
-local function attachPropToPed()
-    if not currentProp or not DoesEntityExist(currentProp) then return end
-    local ped = PlayerPedId()
-    AttachEntityToEntity(
-        currentProp, ped,
-        GetPedBoneIndex(ped, attachment.boneId),
-        attachment.offset.x,   attachment.offset.y,   attachment.offset.z,
-        attachment.rotation.x, attachment.rotation.y, attachment.rotation.z,
-        true, true, false, true, 1, true
+-- ─────────────────────────────────────────────
+--  Camera
+-- ─────────────────────────────────────────────
+
+local function getCamTarget()
+    if camData.focus == 'prop1' and props[1].entity and DoesEntityExist(props[1].entity) then
+        return props[1].entity
+    elseif camData.focus == 'prop2' and props[2].entity and DoesEntityExist(props[2].entity) then
+        return props[2].entity
+    end
+    return PlayerPedId()
+end
+
+local function updateCamPosition()
+    if not cam then return end
+    local target = GetEntityCoords(getCamTarget())
+    local rad = math.rad(camData.angle)
+    SetCamCoord(cam,
+        target.x + camData.dist * math.sin(rad),
+        target.y - camData.dist * math.cos(rad),
+        target.z + camData.height
     )
+    PointCamAtCoord(cam, target.x, target.y, target.z + 0.4)
 end
 
--- ─────────────────────────────────────────────
---  Gizmo - DrawGizmo Native
---  Credits: Andyyy7666, AvarianKnight (aus M-PropV2)
--- ─────────────────────────────────────────────
-
-local gizmoActive    = false
-local gizmoEnabled   = false
-local gizmoMode      = 'Translate'
-local gizmoRelative  = false
-local gizmoCursor    = false
-local gizmoCancelled = false
-
-local WHEEL_STEP = 0.05
-local MIN_SCALE  = 0.05
-local MAX_SCALE  = 50.0
-
-local function _vecLen(x, y, z)
-    return math.sqrt(x*x + y*y + z*z)
+local function startCamera()
+    if cam then return end
+    cam = CreateCam('DEFAULT_SCRIPTED_CAMERA', true)
+    SetCamActive(cam, true)
+    RenderScriptCams(true, true, 300, true, false)
+    updateCamPosition()
 end
 
+local function stopCamera()
+    if not cam then return end
+    RenderScriptCams(false, true, 300, true, false)
+    SetCamActive(cam, false)
+    DestroyCam(cam, false)
+    cam = nil
+end
+
+CreateThread(function()
+    local tick = 0
+    while true do
+        if uiOpen and cam then
+            Wait(0)
+            updateCamPosition()
+            tick = tick + 1
+            if tick >= 6 then
+                tick = 0
+                local p1 = props[1]
+                local p2 = props[2]
+                SendNUIMessage({
+                    type  = 'updateValues',
+                    prop1 = { offset={x=p1.offset.x, y=p1.offset.y, z=p1.offset.z}, rotation={x=p1.rotation.x, y=p1.rotation.y, z=p1.rotation.z} },
+                    prop2 = { offset={x=p2.offset.x, y=p2.offset.y, z=p2.offset.z}, rotation={x=p2.rotation.x, y=p2.rotation.y, z=p2.rotation.z} },
+                })
+            end
+        else
+            Wait(100)
+            tick = 0
+        end
+    end
+end)
+
+-- ─────────────────────────────────────────────
+--  Gizmo
+-- ─────────────────────────────────────────────
+
+local function _vecLen(x, y, z)  return math.sqrt(x*x + y*y + z*z) end
 local function _normalize(x, y, z)
     local l = _vecLen(x, y, z)
     if l == 0 then return 0, 0, 0 end
     return x/l, y/l, z/l
 end
+local function _clamp(v, a, b) if v < a then return a end if v > b then return b end return v end
 
-local function _clamp(v, a, b)
-    if v < a then return a end
-    if v > b then return b end
-    return v
-end
-
-local function _uniformScale(entity)
-    local f, r, u = GetEntityMatrix(entity)
+local function _uniformScale(e)
+    local f, r, u = GetEntityMatrix(e)
     local s = (_vecLen(r[1],r[2],r[3]) + _vecLen(f[1],f[2],f[3]) + _vecLen(u[1],u[2],u[3])) / 3.0
     return s > 0.0 and s or 1.0
 end
 
-local function _makeMatrix(entity)
-    local f, r, u, a = GetEntityMatrix(entity)
+local function _makeMatrix(e)
+    local f, r, u, a = GetEntityMatrix(e)
     local v = dataview.ArrayBuffer(64)
     v:SetFloat32(0,  r[1]):SetFloat32(4,  r[2]):SetFloat32(8,  r[3]):SetFloat32(12, 0)
      :SetFloat32(16, f[1]):SetFloat32(20, f[2]):SetFloat32(24, f[3]):SetFloat32(28, 0)
@@ -173,12 +187,11 @@ local function _makeMatrix(entity)
     return v
 end
 
-local function _applyMatrix(entity, v)
+local function _applyMatrix(e, v)
     local x1,y1,z1 = _normalize(v:GetFloat32(16), v:GetFloat32(20), v:GetFloat32(24))
     local x2,y2,z2 = _normalize(v:GetFloat32(0),  v:GetFloat32(4),  v:GetFloat32(8))
     local x3,y3,z3 = _normalize(v:GetFloat32(32), v:GetFloat32(36), v:GetFloat32(40))
-    local tx,ty,tz = v:GetFloat32(48), v:GetFloat32(52), v:GetFloat32(56)
-    SetEntityMatrix(entity, x1,y1,z1, x2,y2,z2, x3,y3,z3, tx,ty,tz)
+    SetEntityMatrix(e, x1,y1,z1, x2,y2,z2, x3,y3,z3, v:GetFloat32(48), v:GetFloat32(52), v:GetFloat32(56))
 end
 
 local function _applyScale(v, s)
@@ -190,202 +203,24 @@ local function _applyScale(v, s)
      :SetFloat32(32, unx*s):SetFloat32(36, uny*s):SetFloat32(40, unz*s)
 end
 
-local function computeAttachmentFromWorld()
-    local ped     = PlayerPedId()
-    local boneIdx = GetPedBoneIndex(ped, attachment.boneId)
-    local bonePos = GetWorldPositionOfEntityBone(ped, boneIdx)
-    local propPos = GetEntityCoords(currentProp)
-    local propRot = GetEntityRotation(currentProp, 2)
+local function computeFromWorld(slot)
+    local p = props[slot]
+    local ped = PlayerPedId()
+    local bonePos = GetWorldPositionOfEntityBone(ped, GetPedBoneIndex(ped, p.boneId))
+    local propPos = GetEntityCoords(p.entity)
+    local propRot = GetEntityRotation(p.entity, 2)
     local dx = propPos.x - bonePos.x
     local dy = propPos.y - bonePos.y
     local dz = propPos.z - bonePos.z
     local pf, pr, pu = GetEntityMatrix(ped)
-    attachment.offset.x = dx*pr[1] + dy*pr[2] + dz*pr[3]
-    attachment.offset.y = dx*pf[1] + dy*pf[2] + dz*pf[3]
-    attachment.offset.z = dx*pu[1] + dy*pu[2] + dz*pu[3]
+    p.offset.x = dx*pr[1] + dy*pr[2] + dz*pr[3]
+    p.offset.y = dx*pf[1] + dy*pf[2] + dz*pf[3]
+    p.offset.z = dx*pu[1] + dy*pu[2] + dz*pu[3]
     local pedRot = GetEntityRotation(ped, 2)
-    attachment.rotation.x = propRot.x
-    attachment.rotation.y = propRot.y
-    attachment.rotation.z = propRot.z - pedRot.z
+    p.rotation.x = propRot.x
+    p.rotation.y = propRot.y
+    p.rotation.z = propRot.z - pedRot.z
 end
-
--- ─────────────────────────────────────────────
---  TextUI
--- ─────────────────────────────────────────────
-
-local STEP_LEVELS = { 0.001, 0.01, 0.1, 1.0 }
-local stepIndex   = 2
-
-local function updateTextUI()
-    if not currentProp then
-        lib.hideTextUI()
-        return
-    end
-    local stepLabels = { '0.001', '0.01', '0.1', '1.0' }
-    local stepBar = ''
-    for i, lbl in ipairs(stepLabels) do
-        stepBar = stepBar .. (i == stepIndex and ('[' .. lbl .. ']') or lbl)
-        if i < #stepLabels then stepBar = stepBar .. '  ' end
-    end
-    local gizmoLine
-    if gizmoActive then
-        gizmoLine = '────────────────────────────\n'
-            .. 'GIZMO AKTIV - ' .. gizmoMode .. '\n'
-            .. 'W=Move  R=Rotate  S=Scale  Q=Local/World\n'
-            .. 'ENTER=Fertig  ESC=Abbruch'
-    else
-        gizmoLine = '────────────────────────────\n'
-            .. '8/2=Y  4/6=X  7/9=Z\n'
-            .. '1/3=rX  0/Num.=rY  5/Enter=rZ\n'
-            .. 'Num+/-  Schritt  [/]  Schnellwahl  G=Gizmo'
-    end
-    lib.showTextUI(
-        string.format(
-            'd4rk Prop Tool  -  %s\n'
-            .. '────────────────────────────\n'
-            .. 'Offset  X:%+.4f  Y:%+.4f  Z:%+.4f\n'
-            .. 'Rot     X:%+.4f  Y:%+.4f  Z:%+.4f\n'
-            .. '%s',
-            stepBar,
-            attachment.offset.x,   attachment.offset.y,   attachment.offset.z,
-            attachment.rotation.x, attachment.rotation.y, attachment.rotation.z,
-            gizmoLine
-        ),
-        { position = 'top-left', icon = gizmoActive and 'arrow-pointer' or 'screwdriver-wrench' }
-    )
-end
-
--- ─────────────────────────────────────────────
---  Prop spawnen / Animation
--- ─────────────────────────────────────────────
-
-local function spawnAndAttach()
-    removeProp()
-    local model = requestModel(attachment.prop)
-    if not model then
-        lib.notify({ title = 'Prop Tool', description = 'Ungueltiges Modell: ' .. attachment.prop, type = 'error' })
-        return false
-    end
-    local ped    = PlayerPedId()
-    local coords = GetEntityCoords(ped)
-    currentProp  = CreateObject(model, coords.x, coords.y, coords.z, false, false, false)
-    SetEntityNoCollisionEntity(currentProp, ped, true)
-    SetEntityAsMissionEntity(currentProp, true, true)
-    SetModelAsNoLongerNeeded(model)
-    attachPropToPed()
-    updateTextUI()
-    lib.notify({ title = 'Prop Tool', description = 'Prop gespawnt: ' .. attachment.prop, type = 'success' })
-    return true
-end
-
-local function playAnimation(dict, clip)
-    local ped = PlayerPedId()
-    if not requestAnimDict(dict) then
-        lib.notify({ title = 'Prop Tool', description = 'AnimDict nicht gefunden: ' .. dict, type = 'error' })
-        return false
-    end
-    stopAnim()
-    TaskPlayAnim(ped, dict, clip, 8.0, -8.0, -1, 49, 0, false, false, false)
-    currentAnim = { dict = dict, clip = clip }
-    lib.notify({ title = 'Prop Tool', description = 'Anim: ' .. dict .. ' / ' .. clip, type = 'info' })
-    return true
-end
-
--- ─────────────────────────────────────────────
---  Echtzeit-Keybinds - Hold + Beschleunigung
--- ─────────────────────────────────────────────
-
-local AXES = {
-    off_yp  = { key = 'NUMPAD8',     desc = 'Offset Y +',   apply = function(d) attachment.offset.y   = attachment.offset.y   + d end },
-    off_yn  = { key = 'NUMPAD2',     desc = 'Offset Y -',   apply = function(d) attachment.offset.y   = attachment.offset.y   - d end },
-    off_xn  = { key = 'NUMPAD4',     desc = 'Offset X -',   apply = function(d) attachment.offset.x   = attachment.offset.x   - d end },
-    off_xp  = { key = 'NUMPAD6',     desc = 'Offset X +',   apply = function(d) attachment.offset.x   = attachment.offset.x   + d end },
-    off_zp  = { key = 'NUMPAD7',     desc = 'Offset Z +',   apply = function(d) attachment.offset.z   = attachment.offset.z   + d end },
-    off_zn  = { key = 'NUMPAD9',     desc = 'Offset Z -',   apply = function(d) attachment.offset.z   = attachment.offset.z   - d end },
-    rot_xp  = { key = 'NUMPAD1',     desc = 'Rotation X +', apply = function(d) attachment.rotation.x = attachment.rotation.x + d end },
-    rot_xn  = { key = 'NUMPAD3',     desc = 'Rotation X -', apply = function(d) attachment.rotation.x = attachment.rotation.x - d end },
-    rot_yp  = { key = 'NUMPAD0',     desc = 'Rotation Y +', apply = function(d) attachment.rotation.y = attachment.rotation.y + d end },
-    rot_yn  = { key = 'DECIMAL',     desc = 'Rotation Y -', apply = function(d) attachment.rotation.y = attachment.rotation.y - d end },
-    rot_zp  = { key = 'NUMPAD5',     desc = 'Rotation Z +', apply = function(d) attachment.rotation.z = attachment.rotation.z + d end },
-    rot_zn  = { key = 'NUMPADENTER', desc = 'Rotation Z -', apply = function(d) attachment.rotation.z = attachment.rotation.z - d end },
-}
-
-local holdState = {}
-for name in pairs(AXES) do
-    holdState[name] = { pressed = false, holdTime = 0 }
-end
-
-local function accel(ms)
-    if ms < 400  then return 1.0 end
-    if ms < 1200 then return 1.0 + (ms - 400) / 800 * 4.0 end
-    return 10.0
-end
-
-local function setStepIndex(idx)
-    stepIndex = math.max(1, math.min(#STEP_LEVELS, idx))
-    stepSize  = STEP_LEVELS[stepIndex]
-    lib.notify({
-        title       = 'Prop Tool',
-        description = string.format('Schrittgroesse: %.3f', stepSize),
-        type        = 'inform',
-        duration    = 1200,
-        position    = 'top-right',
-    })
-    updateTextUI()
-end
-
-for name, axis in pairs(AXES) do
-    lib.addKeybind({
-        name        = 'ptool_' .. name,
-        description = 'Prop Tool - ' .. axis.desc,
-        defaultKey  = axis.key,
-        onPressed   = function()
-            if not currentProp then return end
-            holdState[name].pressed  = true
-            holdState[name].holdTime = 0
-        end,
-        onReleased  = function()
-            holdState[name].pressed  = false
-            holdState[name].holdTime = 0
-        end,
-    })
-end
-
-lib.addKeybind({ name = 'ptool_step_up',     description = 'Prop Tool - Schrittgroesse +', defaultKey = 'ADD',      onPressed = function() setStepIndex(stepIndex + 1) end })
-lib.addKeybind({ name = 'ptool_step_down',   description = 'Prop Tool - Schrittgroesse -', defaultKey = 'SUBTRACT', onPressed = function() setStepIndex(stepIndex - 1) end })
-lib.addKeybind({ name = 'ptool_step_sm_alt', description = 'Prop Tool - Schritt 0.01',     defaultKey = 'LBRACKET', onPressed = function() stepIndex = 2; setStepIndex(stepIndex) end })
-lib.addKeybind({ name = 'ptool_step_lg_alt', description = 'Prop Tool - Schritt 0.1',      defaultKey = 'RBRACKET', onPressed = function() stepIndex = 3; setStepIndex(stepIndex) end })
-
-local lastFrameTime = GetGameTimer()
-CreateThread(function()
-    while true do
-        if not currentProp then
-            Wait(100)
-            lastFrameTime = GetGameTimer()
-        else
-            Wait(0)
-            local now = GetGameTimer()
-            local dt  = math.min(now - lastFrameTime, 100)
-            lastFrameTime = now
-            local changed = false
-            for name, state in pairs(holdState) do
-                if state.pressed then
-                    state.holdTime = state.holdTime + dt
-                    AXES[name].apply(stepSize * accel(state.holdTime) * (dt / 1000.0))
-                    changed = true
-                end
-            end
-            if changed then
-                attachPropToPed()
-                updateTextUI()
-            end
-        end
-    end
-end)
-
--- ─────────────────────────────────────────────
---  Gizmo-Loop
--- ─────────────────────────────────────────────
 
 local function gizmoTextUILoop(entity)
     CreateThread(function()
@@ -397,15 +232,12 @@ local function gizmoTextUILoop(entity)
                 string.format(
                     'Gizmo - %s | %s\n'
                     .. 'Pos  %.2f  %.2f  %.2f\n'
-                    .. 'Rot  %.1f  %.1f  %.1f\n'
-                    .. 'Scale: %.2f\n'
-                    .. 'W=Move  R=Rotate  S=Scale  Q=Local/World\n'
-                    .. 'LALT=Snap  ENTER=Fertig  ESC=Abbruch',
-                    gizmoMode,
-                    gizmoRelative and 'Lokal' or 'Welt',
+                    .. 'Rot  %.1f  %.1f  %.1f  Scale: %.2f\n'
+                    .. 'W=Move  R=Rotate  S=Scale  Q=Lokal\n'
+                    .. 'LALT=Snap  ENTER=OK  ESC=Abbruch',
+                    gizmoMode, gizmoRelative and 'Lokal' or 'Welt',
                     pos.x, pos.y, pos.z,
-                    rot.x, rot.y, rot.z,
-                    _uniformScale(entity)
+                    rot.x, rot.y, rot.z, _uniformScale(entity)
                 ),
                 { position = 'top-left', icon = 'arrow-pointer' }
             )
@@ -450,8 +282,8 @@ local function runGizmoLoop(entity)
             local up   = IsDisabledControlJustPressed(0, 15)
             local down = IsDisabledControlJustPressed(0, 14)
             if up or down then
-                local target = _clamp(_uniformScale(entity) * (1.0 + (up and WHEEL_STEP or -WHEEL_STEP)), MIN_SCALE, MAX_SCALE)
-                _applyScale(mat, target)
+                local t = _clamp(_uniformScale(entity) * (1.0 + (up and WHEEL_STEP or -WHEEL_STEP)), MIN_SCALE, MAX_SCALE)
+                _applyScale(mat, t)
                 _applyMatrix(entity, mat)
             end
         end
@@ -462,13 +294,7 @@ local function runGizmoLoop(entity)
             SetEntityRotation(entity, rot.x, rot.y, rot.z, 2, true)
         end
 
-        local changed = Citizen.InvokeNative(
-            0xEB2EDCA2,
-            mat:Buffer(),
-            'PropTool_Gizmo',
-            Citizen.ReturnResultAnyway()
-        )
-
+        local changed = Citizen.InvokeNative(0xEB2EDCA2, mat:Buffer(), 'PropTool_Gizmo', Citizen.ReturnResultAnyway())
         if changed then
             if gizmoMode == 'Scale' then
                 local ns = _clamp(math.max(
@@ -488,316 +314,437 @@ local function runGizmoLoop(entity)
     gizmoEnabled = false
 end
 
-local function startGizmo()
-    if not currentProp then
-        lib.notify({ title = 'Prop Tool', description = 'Kein aktiver Prop.', type = 'error' })
+local function startGizmo(slot)
+    local p = props[slot]
+    if not p.entity or not DoesEntityExist(p.entity) then
+        lib.notify({ title='Prop Tool', description='Kein Prop in Slot '..slot, type='error' })
         return
     end
     if gizmoActive then return end
+
     CreateThread(function()
+        SetNuiFocus(false, false)
+        SendNUIMessage({ type='hideUI' })
+        stopCamera()
+        uiOpen = false
+
         gizmoActive    = true
         gizmoEnabled   = true
         gizmoCancelled = false
         gizmoMode      = 'Translate'
-        local savedOffset   = { x = attachment.offset.x,   y = attachment.offset.y,   z = attachment.offset.z }
-        local savedRotation = { x = attachment.rotation.x, y = attachment.rotation.y, z = attachment.rotation.z }
-        DetachEntity(currentProp, true, true)
-        FreezeEntityPosition(currentProp, true)  -- verhindert Fallen nach Detach
-        gizmoTextUILoop(currentProp)
-        runGizmoLoop(currentProp)
-        FreezeEntityPosition(currentProp, false)
+
+        local savedOff = { x=p.offset.x,   y=p.offset.y,   z=p.offset.z }
+        local savedRot = { x=p.rotation.x, y=p.rotation.y, z=p.rotation.z }
+
+        DetachEntity(p.entity, true, true)
+        FreezeEntityPosition(p.entity, true)
+
+        gizmoTextUILoop(p.entity)
+        runGizmoLoop(p.entity)
+
+        FreezeEntityPosition(p.entity, false)
         gizmoActive = false
+
         if gizmoCancelled then
-            attachment.offset   = savedOffset
-            attachment.rotation = savedRotation
-            lib.notify({ title = 'Prop Tool', description = 'Gizmo abgebrochen.', type = 'error' })
+            p.offset   = savedOff
+            p.rotation = savedRot
+            lib.notify({ title='Prop Tool', description='Gizmo abgebrochen.', type='error' })
         else
-            computeAttachmentFromWorld()
-            lib.notify({ title = 'Prop Tool', description = 'Gizmo fertig - Offset uebernommen.', type = 'success' })
+            computeFromWorld(slot)
+            lib.notify({ title='Prop Tool', description='Gizmo fertig.', type='success' })
         end
-        attachPropToPed()
-        updateTextUI()
+
+        attachProp(slot)
+        openUI()
     end)
 end
 
-lib.addKeybind({ name = 'ptool_gizmo_toggle',   description = 'Prop Tool - Gizmo ein/aus',        defaultKey = 'G',     onPressed  = function() startGizmo() end })
-lib.addKeybind({ name = 'ptool_gizmoConfirm',   description = 'Prop Tool - Gizmo bestaetigen',    defaultKey = 'RETURN', onReleased = function() if gizmoEnabled then gizmoEnabled = false end end })
-lib.addKeybind({ name = 'ptool_gizmoSnap',      description = 'Prop Tool - Gizmo Snap to Ground', defaultKey = 'LMENU', onPressed  = function() if gizmoEnabled then PlaceObjectOnGroundProperly_2(currentProp) end end })
-
-lib.addKeybind({
-    name = '_ptool_gizmoSelect', description = 'Prop Tool - Gizmo Auswahl',
-    defaultMapper = 'MOUSE_BUTTON', defaultKey = 'MOUSE_LEFT',
-    onPressed  = function() if gizmoEnabled then ExecuteCommand('+gizmoSelect') end end,
-    onReleased = function() ExecuteCommand('-gizmoSelect') end,
-})
-lib.addKeybind({
-    name = '_ptool_gizmoTranslate', description = 'Prop Tool - Gizmo Move', defaultKey = 'W',
-    onPressed  = function() if gizmoEnabled then gizmoMode = 'Translate' ExecuteCommand('+gizmoTranslation') end end,
-    onReleased = function() ExecuteCommand('-gizmoTranslation') end,
-})
-lib.addKeybind({
-    name = '_ptool_gizmoRotate', description = 'Prop Tool - Gizmo Rotate', defaultKey = 'R',
-    onPressed  = function() if gizmoEnabled then gizmoMode = 'Rotate' ExecuteCommand('+gizmoRotation') end end,
-    onReleased = function() ExecuteCommand('-gizmoRotation') end,
-})
-lib.addKeybind({
-    name = '_ptool_gizmoScale', description = 'Prop Tool - Gizmo Scale', defaultKey = 'S',
-    onPressed  = function() if gizmoEnabled then gizmoMode = 'Scale' ExecuteCommand('+gizmoScale') end end,
-    onReleased = function() ExecuteCommand('-gizmoScale') end,
-})
-lib.addKeybind({
-    name = '_ptool_gizmoLocal', description = 'Prop Tool - Gizmo Local/World', defaultKey = 'Q',
-    onPressed  = function() if gizmoEnabled then gizmoRelative = not gizmoRelative ExecuteCommand('+gizmoLocal') end end,
-    onReleased = function() ExecuteCommand('-gizmoLocal') end,
-})
+lib.addKeybind({ name='_ptool_gizmoSelect',    description='Prop Tool Gizmo - Auswahl',    defaultMapper='MOUSE_BUTTON', defaultKey='MOUSE_LEFT',
+    onPressed=function() if gizmoEnabled then ExecuteCommand('+gizmoSelect') end end,
+    onReleased=function() ExecuteCommand('-gizmoSelect') end })
+lib.addKeybind({ name='_ptool_gizmoTranslate', description='Prop Tool Gizmo - Move',        defaultKey='W',
+    onPressed=function() if gizmoEnabled then gizmoMode='Translate' ExecuteCommand('+gizmoTranslation') end end,
+    onReleased=function() ExecuteCommand('-gizmoTranslation') end })
+lib.addKeybind({ name='_ptool_gizmoRotate',    description='Prop Tool Gizmo - Rotate',      defaultKey='R',
+    onPressed=function() if gizmoEnabled then gizmoMode='Rotate' ExecuteCommand('+gizmoRotation') end end,
+    onReleased=function() ExecuteCommand('-gizmoRotation') end })
+lib.addKeybind({ name='_ptool_gizmoScale',     description='Prop Tool Gizmo - Scale',       defaultKey='S',
+    onPressed=function() if gizmoEnabled then gizmoMode='Scale' ExecuteCommand('+gizmoScale') end end,
+    onReleased=function() ExecuteCommand('-gizmoScale') end })
+lib.addKeybind({ name='_ptool_gizmoLocal',     description='Prop Tool Gizmo - Lokal/Welt',  defaultKey='Q',
+    onPressed=function() if gizmoEnabled then gizmoRelative=not gizmoRelative ExecuteCommand('+gizmoLocal') end end,
+    onReleased=function() ExecuteCommand('-gizmoLocal') end })
+lib.addKeybind({ name='ptool_gizmoSnap',       description='Prop Tool Gizmo - Snap Ground', defaultKey='LMENU',
+    onPressed=function() if gizmoEnabled then PlaceObjectOnGroundProperly_2(props[1].entity) end end })
+lib.addKeybind({ name='ptool_gizmoConfirm',    description='Prop Tool Gizmo - Bestaetigen', defaultKey='RETURN',
+    onReleased=function() if gizmoEnabled then gizmoEnabled=false end end })
 
 -- ─────────────────────────────────────────────
---  Hauptmenu
+--  Data / Persistence
 -- ─────────────────────────────────────────────
 
-local function openSavedMenu()
-    local data        = loadAttachments()
-    local menuOptions = {}
+local function loadAttachments() return cachedAttachments end
 
-    for entryName, entry in pairs(data) do
-        menuOptions[#menuOptions + 1] = {
-            title       = entryName,
-            description = entry.prop .. ' @ ' .. entry.bone,
-            onSelect    = function()
-                attachment.prop     = entry.prop
-                attachment.bone     = entry.bone
-                attachment.boneId   = entry.boneId
-                attachment.offset   = { x = entry.offset.x,   y = entry.offset.y,   z = entry.offset.z }
-                attachment.rotation = { x = entry.rotation.x, y = entry.rotation.y, z = entry.rotation.z }
-                attachment.animDict = entry.animDict or ''
-                attachment.animClip = entry.animClip or ''
-                local spawned = spawnAndAttach()
-                if spawned and attachment.animDict ~= '' then
-                    playAnimation(attachment.animDict, attachment.animClip)
-                end
-            end,
-            metadata = {
-                { label = 'Prop',     value = entry.prop },
-                { label = 'Knochen',  value = entry.bone },
-                { label = 'AnimDict', value = entry.animDict or '-' },
-                { label = 'AnimClip', value = entry.animClip or '-' },
-                { label = 'Notes',    value = entry.notes    or '-' },
-            },
-            contextMenu = entryName .. '_ctx',
-        }
-
-        lib.registerContext({
-            id      = entryName .. '_ctx',
-            title   = entryName,
-            options = {
-                {
-                    title    = 'Bearbeiten',
-                    onSelect = function()
-                        if not currentProp then
-                            lib.notify({ title = 'Prop Tool', description = 'Kein Prop aktiv.', type = 'error' })
-                            return
-                        end
-                        local inputData = lib.inputDialog('Eintrag bearbeiten: ' .. entryName, {
-                            { type = 'input', label = 'Notiz', default = entry.notes or '' },
-                        })
-                        if not inputData then return end
-                        data[entryName].notes    = inputData[1] or ''
-                        data[entryName].offset   = { x = attachment.offset.x,   y = attachment.offset.y,   z = attachment.offset.z }
-                        data[entryName].rotation = { x = attachment.rotation.x, y = attachment.rotation.y, z = attachment.rotation.z }
-                        if currentAnim then
-                            data[entryName].animDict = currentAnim.dict
-                            data[entryName].animClip = currentAnim.clip
-                        end
-                        saveAttachments(data)
-                        lib.notify({ title = 'Prop Tool', description = entryName .. ' gespeichert.', type = 'success' })
-                    end,
-                },
-                {
-                    title    = 'Loeschen',
-                    onSelect = function()
-                        data[entryName] = nil
-                        saveAttachments(data)
-                        lib.notify({ title = 'Prop Tool', description = entryName .. ' geloescht.', type = 'inform' })
-                    end,
-                },
-            },
-        })
-    end
-
-    if #menuOptions == 0 then
-        menuOptions[#menuOptions + 1] = { title = 'Keine Eintraege vorhanden', disabled = true }
-    end
-
-    lib.registerContext({
-        id      = 'ptool_saved_menu',
-        title   = 'Gespeicherte Eintraege',
-        menu    = 'ptool_main_menu',
-        options = menuOptions,
-    })
-    lib.showContext('ptool_saved_menu')
+local function saveAttachments(data)
+    cachedAttachments = data
+    TriggerServerEvent('d4rk_prop_tool:saveAttachments', json.encode(data, { indent=true }))
 end
 
-local function openMainMenu()
-    lib.registerContext({
-        id      = 'ptool_main_menu',
-        title   = 'd4rk Prop Tool',
-        options = {
-            {
-                title       = 'Prop spawnen',
-                description = 'Modell, Knochen und Offsets festlegen',
-                onSelect    = function()
-                    local input = lib.inputDialog('Prop spawnen', {
-                        { type = 'input',  label = 'Prop Modell',  placeholder = 'prop_ld_jerrycan_01', required = true },
-                        { type = 'select', label = 'Knochen', options = (function()
-                            local opts = {}
-                            for _, b in ipairs(BONES) do opts[#opts+1] = { label = b.name, value = b.name } end
-                            return opts
-                        end)() },
-                        { type = 'number', label = 'Offset X',   default = 0.0 },
-                        { type = 'number', label = 'Offset Y',   default = 0.0 },
-                        { type = 'number', label = 'Offset Z',   default = 0.0 },
-                        { type = 'number', label = 'Rotation X', default = 0.0 },
-                        { type = 'number', label = 'Rotation Y', default = 0.0 },
-                        { type = 'number', label = 'Rotation Z', default = 0.0 },
-                    })
-                    if not input then return end
-                    local boneName = input[2] or 'SKEL_R_Hand'
-                    attachment.prop        = input[1]
-                    attachment.bone        = boneName
-                    attachment.boneId      = getBoneId(boneName) or 28422
-                    attachment.offset.x    = tonumber(input[3]) or 0.0
-                    attachment.offset.y    = tonumber(input[4]) or 0.0
-                    attachment.offset.z    = tonumber(input[5]) or 0.0
-                    attachment.rotation.x  = tonumber(input[6]) or 0.0
-                    attachment.rotation.y  = tonumber(input[7]) or 0.0
-                    attachment.rotation.z  = tonumber(input[8]) or 0.0
-                    spawnAndAttach()
-                end,
-            },
-            {
-                title       = 'Animation abspielen',
-                description = 'AnimDict + AnimClip (geloopt)',
-                onSelect    = function()
-                    local input = lib.inputDialog('Animation abspielen', {
-                        { type = 'input', label = 'AnimDict', required = true },
-                        { type = 'input', label = 'AnimClip', required = true },
-                    })
-                    if not input then return end
-                    attachment.animDict = input[1]
-                    attachment.animClip = input[2]
-                    playAnimation(attachment.animDict, attachment.animClip)
-                end,
-            },
-            {
-                title    = 'Animation stoppen',
-                onSelect = function()
-                    stopAnim()
-                    lib.notify({ title = 'Prop Tool', description = 'Animation gestoppt.', type = 'inform' })
-                end,
-            },
-            {
-                title       = 'Aktuellen Stand speichern',
-                description = 'Attachment einen Namen geben',
-                onSelect    = function()
-                    if not currentProp then
-                        lib.notify({ title = 'Prop Tool', description = 'Kein aktiver Prop.', type = 'error' })
-                        return
-                    end
-                    local input = lib.inputDialog('Eintrag speichern', {
-                        { type = 'input', label = 'Name (z.B. jerrycan_pour)', required = true },
-                        { type = 'input', label = 'Notiz (optional)' },
-                    })
-                    if not input or not input[1] or input[1] == '' then return end
-                    local entryName = input[1]:gsub('%s+', '_'):lower()
-                    local data = loadAttachments()
-                    data[entryName] = {
-                        prop     = attachment.prop,
-                        bone     = attachment.bone,
-                        boneId   = attachment.boneId,
-                        offset   = { x = attachment.offset.x,   y = attachment.offset.y,   z = attachment.offset.z },
-                        rotation = { x = attachment.rotation.x, y = attachment.rotation.y, z = attachment.rotation.z },
-                        animDict = currentAnim and currentAnim.dict or attachment.animDict,
-                        animClip = currentAnim and currentAnim.clip or attachment.animClip,
-                        notes    = input[2] or '',
-                    }
-                    saveAttachments(data)
-                    lib.notify({ title = 'Prop Tool', description = 'Gespeichert als ' .. entryName, type = 'success' })
-                end,
-            },
-            {
-                title    = 'Gespeicherte Eintraege',
-                arrow    = true,
-                onSelect = function() openSavedMenu() end,
-            },
-            {
-                title    = 'Prop entfernen & stoppen',
-                onSelect = function()
-                    stopAnim(); removeProp(); lib.hideTextUI()
-                    lib.notify({ title = 'Prop Tool', description = 'Prop entfernt.', type = 'inform' })
-                end,
-            },
-        },
-    })
-    lib.showContext('ptool_main_menu')
+AddEventHandler('d4rk_prop_tool:receiveAttachments', function(raw)
+    local ok, data = pcall(json.decode, raw)
+    cachedAttachments = ok and data or {}
+end)
+
+CreateThread(function()
+    Wait(500)
+    TriggerServerEvent('d4rk_prop_tool:loadAttachments')
+end)
+
+-- ─────────────────────────────────────────────
+--  Copy formats
+-- ─────────────────────────────────────────────
+
+local function generateCopyText(slot, format)
+    local p = props[slot]
+    local o = p.offset
+    local r = p.rotation
+    if format == 'ox' then
+        return string.format(
+            "{\n    model = '%s',\n    bone  = %d,\n    pos   = vec3(%.4f, %.4f, %.4f),\n    rot   = vec3(%.4f, %.4f, %.4f),\n}",
+            p.model, p.boneId, o.x, o.y, o.z, r.x, r.y, r.z
+        )
+    elseif format == 'emotes' then
+        return string.format(
+            "prop = {\n    model='%s', bone=%d,\n    x=%.4f, y=%.4f, z=%.4f,\n    xr=%.4f, yr=%.4f, zr=%.4f,\n}",
+            p.model, p.boneId, o.x, o.y, o.z, r.x, r.y, r.z
+        )
+    else
+        return string.format(
+            "-- %s  bone:%d\nAttachEntityToEntity(prop, ped, GetPedBoneIndex(ped, %d),\n    %.4f, %.4f, %.4f,\n    %.4f, %.4f, %.4f,\n    true, true, false, true, %d, true)",
+            p.model, p.boneId, p.boneId, o.x, o.y, o.z, r.x, r.y, r.z, p.rotOrder
+        )
+    end
 end
 
 -- ─────────────────────────────────────────────
---  Export-Generator
+--  Export
 -- ─────────────────────────────────────────────
 
 local function generateExport()
     local data = loadAttachments()
     if not next(data) then
-        lib.notify({ title = 'Prop Tool', description = 'Keine Eintraege zum Exportieren.', type = 'error' })
+        lib.notify({ title='Prop Tool', description='Keine Eintraege.', type='error' })
         return
     end
-    local lines = { '-- Generiert von d4rk_prop_tool', '-- ' .. os.date('%Y-%m-%d %H:%M:%S'), '', 'local ATTACHMENTS = {' }
+    local lines = { '-- d4rk_prop_tool export', '-- '..os.date('%Y-%m-%d %H:%M:%S'), '', 'local ATTACHMENTS = {' }
     for name, e in pairs(data) do
-        lines[#lines+1] = '    ' .. name .. ' = {'
-        lines[#lines+1] = "        prop     = '" .. e.prop .. "',"
-        lines[#lines+1] = '        bone     = ' .. e.boneId .. ',  -- ' .. e.bone
+        lines[#lines+1] = '    '..name..' = {'
+        lines[#lines+1] = "        prop     = '"..e.prop.."',"
+        lines[#lines+1] = '        bone     = '..e.boneId..',  -- '..e.bone
         lines[#lines+1] = string.format('        offset   = vector3(%.4f, %.4f, %.4f),', e.offset.x, e.offset.y, e.offset.z)
         lines[#lines+1] = string.format('        rotation = vector3(%.4f, %.4f, %.4f),', e.rotation.x, e.rotation.y, e.rotation.z)
         if e.animDict and e.animDict ~= '' then
-            lines[#lines+1] = "        animDict = '" .. e.animDict .. "',"
-            lines[#lines+1] = "        animClip = '" .. e.animClip .. "',"
+            lines[#lines+1] = "        animDict = '"..e.animDict.."',"
+            lines[#lines+1] = "        animClip = '"..e.animClip.."',"
         end
-        if e.notes and e.notes ~= '' then lines[#lines+1] = '        -- ' .. e.notes end
+        if e.notes and e.notes ~= '' then lines[#lines+1] = '        -- '..e.notes end
         lines[#lines+1] = '    },'
     end
     lines[#lines+1] = '}'
     local output = table.concat(lines, '\n')
-    print('\n' .. output .. '\n')
+    print('\n'..output..'\n')
     TriggerServerEvent('d4rk_prop_tool:saveExport', output)
-    lib.notify({ title = 'Prop Tool', description = 'Export gespeichert.', type = 'success', duration = 6000 })
+    lib.notify({ title='Prop Tool', description='Export in F8 + output/export.lua', type='success', duration=5000 })
 end
 
 -- ─────────────────────────────────────────────
---  Befehle
+--  Open / Close UI
 -- ─────────────────────────────────────────────
 
-RegisterCommand('ptool', function(source, args)
+function openUI()
+    local boneList = {}
+    for _, b in ipairs(Config.Bones) do boneList[#boneList+1] = { name=b.name, id=b.id } end
+
+    local animList = {}
+    for _, a in ipairs(Config.Animations) do animList[#animList+1] = { label=a.label, dict=a.dict, anim=a.anim, flags=a.flags } end
+
+    SendNUIMessage({
+        type         = 'openUI',
+        props        = Config.Props,
+        animations   = animList,
+        bones        = boneList,
+        moveSpeed    = moveSpeed,
+        rotateSpeed  = rotateSpeed,
+        moveSpeeds   = Config.MoveSpeeds,
+        rotateSpeeds = Config.RotateSpeeds,
+        camFocus     = camData.focus,
+        camDist      = camData.dist,
+        camAngle     = camData.angle,
+        camHeight    = camData.height,
+    })
+    SetNuiFocus(true, true)
+    startCamera()
+    uiOpen = true
+end
+
+local function closeUI()
+    SetNuiFocus(false, false)
+    SendNUIMessage({ type='hideUI' })
+    stopCamera()
+    uiOpen = false
+end
+
+-- ─────────────────────────────────────────────
+--  NUI Callbacks
+-- ─────────────────────────────────────────────
+
+RegisterNUICallback('closeUI', function(_, cb) closeUI() cb({}) end)
+
+RegisterNUICallback('spawnProp', function(data, cb)
+    local slot  = data.slot
+    local model = data.model
+    deleteProp(slot)
+    local mdl = requestModel(model)
+    if not mdl then
+        SendNUIMessage({ type='toast', msg='Ungueltiges Modell: '..model, style='error' })
+        cb({}); return
+    end
+    local ped    = PlayerPedId()
+    local coords = GetEntityCoords(ped)
+    local ent    = CreateObject(mdl, coords.x, coords.y, coords.z, false, false, false)
+    SetEntityNoCollisionEntity(ent, ped, true)
+    SetEntityAsMissionEntity(ent, true, true)
+    SetModelAsNoLongerNeeded(mdl)
+    props[slot].entity = ent
+    props[slot].model  = model
+    attachProp(slot)
+    SendNUIMessage({ type='toast', msg='Prop '..model..' gespawnt', style='success' })
+    cb({})
+end)
+
+RegisterNUICallback('deleteProp', function(data, cb)
+    deleteProp(data.slot)
+    cb({})
+end)
+
+RegisterNUICallback('setBone', function(data, cb)
+    local p = props[data.slot]
+    p.boneId = data.boneId
+    for _, b in ipairs(Config.Bones) do
+        if b.id == data.boneId then p.bone = b.name break end
+    end
+    attachProp(data.slot)
+    cb({})
+end)
+
+RegisterNUICallback('setRotOrder', function(data, cb)
+    props[data.slot].rotOrder = data.order
+    attachProp(data.slot)
+    cb({})
+end)
+
+RegisterNUICallback('moveProp', function(data, cb)
+    local p  = props[data.slot]
+    local d  = data.dir
+    local ms = moveSpeed
+    local rs = rotateSpeed
+    if     d == 'forward'  then p.offset.y   = p.offset.y   + ms
+    elseif d == 'back'     then p.offset.y   = p.offset.y   - ms
+    elseif d == 'left'     then p.offset.x   = p.offset.x   - ms
+    elseif d == 'right'    then p.offset.x   = p.offset.x   + ms
+    elseif d == 'up'       then p.offset.z   = p.offset.z   + ms
+    elseif d == 'down'     then p.offset.z   = p.offset.z   - ms
+    elseif d == 'rotLeft'  then p.rotation.z = p.rotation.z - rs
+    elseif d == 'rotRight' then p.rotation.z = p.rotation.z + rs
+    elseif d == 'rotUp'    then p.rotation.x = p.rotation.x - rs
+    elseif d == 'rotDown'  then p.rotation.x = p.rotation.x + rs
+    elseif d == 'rotCW'    then p.rotation.y = p.rotation.y + rs
+    elseif d == 'rotCCW'   then p.rotation.y = p.rotation.y - rs
+    end
+    attachProp(data.slot)
+    cb({})
+end)
+
+RegisterNUICallback('playAnim', function(data, cb)
+    if not requestAnimDict(data.dict) then
+        SendNUIMessage({ type='toast', msg='AnimDict nicht gefunden', style='error' })
+        cb({}); return
+    end
+    stopAnim()
+    TaskPlayAnim(PlayerPedId(), data.dict, data.anim, 8.0, -8.0, -1, data.flags or 49, 0, false, false, false)
+    currentAnim = { dict=data.dict, clip=data.anim }
+    cb({})
+end)
+
+RegisterNUICallback('stopAnim',          function(_, cb) stopAnim() cb({}) end)
+RegisterNUICallback('updateMoveSpeed',   function(d, cb) moveSpeed   = tonumber(d.value) or 0.01 cb({}) end)
+RegisterNUICallback('updateRotateSpeed', function(d, cb) rotateSpeed = tonumber(d.value) or 1.0  cb({}) end)
+
+RegisterNUICallback('updateCamera', function(data, cb)
+    camData.dist   = data.dist   or camData.dist
+    camData.angle  = data.angle  or camData.angle
+    camData.height = data.height or camData.height
+    updateCamPosition()
+    cb({})
+end)
+
+RegisterNUICallback('updateCameraFocus', function(data, cb)
+    camData.focus = data.focus or 'ped'
+    updateCamPosition()
+    cb({})
+end)
+
+RegisterNUICallback('startGizmo', function(data, cb) startGizmo(data.slot) cb({}) end)
+
+RegisterNUICallback('resetProp', function(data, cb)
+    local p = props[data.slot]
+    p.offset   = { x=0.0, y=0.0, z=0.0 }
+    p.rotation = { x=0.0, y=0.0, z=0.0 }
+    attachProp(data.slot)
+    cb({})
+end)
+
+RegisterNUICallback('resetAll', function(_, cb)
+    for slot = 1, 2 do
+        props[slot].offset   = { x=0.0, y=0.0, z=0.0 }
+        props[slot].rotation = { x=0.0, y=0.0, z=0.0 }
+        attachProp(slot)
+    end
+    stopAnim()
+    camData = { dist=2.5, angle=0.0, height=0.5, focus='ped' }
+    cb({})
+end)
+
+RegisterNUICallback('copyData', function(data, cb)
+    SendNUIMessage({ type='clipboard', text=generateCopyText(data.slot, data.format) })
+    cb({})
+end)
+
+RegisterNUICallback('saveEntry', function(data, cb)
+    local name = (data.name or ''):gsub('%s+', '_'):lower()
+    if name == '' then cb({}); return end
+    local slot = (props[1].entity and DoesEntityExist(props[1].entity)) and 1 or 2
+    local p    = props[slot]
+    local all  = loadAttachments()
+    all[name]  = {
+        prop     = p.model,
+        bone     = p.bone,
+        boneId   = p.boneId,
+        offset   = { x=p.offset.x,   y=p.offset.y,   z=p.offset.z },
+        rotation = { x=p.rotation.x, y=p.rotation.y, z=p.rotation.z },
+        animDict = currentAnim and currentAnim.dict or '',
+        animClip = currentAnim and currentAnim.clip or '',
+        notes    = data.notes or '',
+    }
+    saveAttachments(all)
+    cb({})
+end)
+
+RegisterNUICallback('exportLua', function(_, cb)
+    generateExport()
+    cb({})
+end)
+
+-- ─────────────────────────────────────────────
+--  Numpad (Slot 1, works when UI is closed)
+-- ─────────────────────────────────────────────
+
+local STEP_LEVELS = { 0.001, 0.01, 0.1, 1.0 }
+local stepIndex   = 2
+
+local AXES = {
+    off_yp  = { key='NUMPAD8',     fn=function(d) props[1].offset.y   = props[1].offset.y   + d end },
+    off_yn  = { key='NUMPAD2',     fn=function(d) props[1].offset.y   = props[1].offset.y   - d end },
+    off_xn  = { key='NUMPAD4',     fn=function(d) props[1].offset.x   = props[1].offset.x   - d end },
+    off_xp  = { key='NUMPAD6',     fn=function(d) props[1].offset.x   = props[1].offset.x   + d end },
+    off_zp  = { key='NUMPAD7',     fn=function(d) props[1].offset.z   = props[1].offset.z   + d end },
+    off_zn  = { key='NUMPAD9',     fn=function(d) props[1].offset.z   = props[1].offset.z   - d end },
+    rot_xp  = { key='NUMPAD1',     fn=function(d) props[1].rotation.x = props[1].rotation.x + d end },
+    rot_xn  = { key='NUMPAD3',     fn=function(d) props[1].rotation.x = props[1].rotation.x - d end },
+    rot_yp  = { key='NUMPAD0',     fn=function(d) props[1].rotation.y = props[1].rotation.y + d end },
+    rot_yn  = { key='DECIMAL',     fn=function(d) props[1].rotation.y = props[1].rotation.y - d end },
+    rot_zp  = { key='NUMPAD5',     fn=function(d) props[1].rotation.z = props[1].rotation.z + d end },
+    rot_zn  = { key='NUMPADENTER', fn=function(d) props[1].rotation.z = props[1].rotation.z - d end },
+}
+
+local holdState = {}
+for name in pairs(AXES) do holdState[name] = { pressed=false, holdTime=0 } end
+
+local function accel(ms)
+    if ms < 400  then return 1.0 end
+    if ms < 1200 then return 1.0 + (ms-400)/800*4.0 end
+    return 10.0
+end
+
+for name, axis in pairs(AXES) do
+    lib.addKeybind({
+        name='ptool_num_'..name, description='Prop Tool Num - '..name, defaultKey=axis.key,
+        onPressed=function()
+            if uiOpen or gizmoActive then return end
+            if not (props[1].entity and DoesEntityExist(props[1].entity)) then return end
+            holdState[name].pressed=true; holdState[name].holdTime=0
+        end,
+        onReleased=function() holdState[name].pressed=false; holdState[name].holdTime=0 end,
+    })
+end
+
+lib.addKeybind({ name='ptool_step_up', description='Prop Tool - Schritt +', defaultKey='ADD',
+    onPressed=function()
+        if uiOpen or gizmoActive then return end
+        stepIndex = math.min(#STEP_LEVELS, stepIndex+1)
+        moveSpeed = STEP_LEVELS[stepIndex]
+        lib.notify({ title='Prop Tool', description=string.format('Schritt: %.3f', moveSpeed), type='inform', duration=1200, position='top-right' })
+    end })
+lib.addKeybind({ name='ptool_step_down', description='Prop Tool - Schritt -', defaultKey='SUBTRACT',
+    onPressed=function()
+        if uiOpen or gizmoActive then return end
+        stepIndex = math.max(1, stepIndex-1)
+        moveSpeed = STEP_LEVELS[stepIndex]
+        lib.notify({ title='Prop Tool', description=string.format('Schritt: %.3f', moveSpeed), type='inform', duration=1200, position='top-right' })
+    end })
+
+local lastFrame = GetGameTimer()
+CreateThread(function()
+    while true do
+        if uiOpen or gizmoActive then
+            Wait(100); lastFrame = GetGameTimer()
+        else
+            Wait(0)
+            local now = GetGameTimer()
+            local dt  = math.min(now - lastFrame, 100)
+            lastFrame = now
+            local changed = false
+            for name, state in pairs(holdState) do
+                if state.pressed then
+                    state.holdTime = state.holdTime + dt
+                    AXES[name].fn(moveSpeed * accel(state.holdTime) * (dt / 1000.0))
+                    changed = true
+                end
+            end
+            if changed then attachProp(1) end
+        end
+    end
+end)
+
+-- ─────────────────────────────────────────────
+--  Commands
+-- ─────────────────────────────────────────────
+
+RegisterCommand(Config.Command, function(source, args)
     local sub = args[1]
     if not sub or sub == '' then
-        openMainMenu()
+        if uiOpen then closeUI() else openUI() end
     elseif sub == 'stop' then
-        stopAnim(); removeProp(); lib.hideTextUI()
-        lib.notify({ title = 'Prop Tool', description = 'Gestoppt.', type = 'inform' })
-    elseif sub == 'stopanim' then
-        stopAnim()
-        lib.notify({ title = 'Prop Tool', description = 'Animation gestoppt.', type = 'inform' })
+        stopAnim(); deleteProp(1); deleteProp(2); closeUI()
+        lib.notify({ title='Prop Tool', description='Alles gestoppt.', type='inform' })
     elseif sub == 'export' then
         generateExport()
     elseif sub == 'list' then
         local data = loadAttachments()
-        if not next(data) then print('[d4rk_prop_tool] Keine Eintraege.') return end
+        if not next(data) then print('[d4rk_prop_tool] Keine Eintraege.'); return end
         print('\n[d4rk_prop_tool] Eintraege:')
-        for name, entry in pairs(data) do
-            print('  - ' .. name .. ' -> ' .. entry.prop .. ' @ ' .. entry.bone)
-        end
-        lib.notify({ title = 'Prop Tool', description = 'Eintraege in F8 ausgegeben.', type = 'inform' })
-    else
-        lib.notify({ title = 'Prop Tool', description = 'Unbekannter Befehl: ' .. sub, type = 'error' })
+        for n, e in pairs(data) do print('  - '..n..' -> '..e.prop..' @ '..e.bone) end
+        lib.notify({ title='Prop Tool', description='Eintraege in F8', type='inform' })
     end
 end, false)
 
@@ -805,15 +752,17 @@ end, false)
 --  Cleanup
 -- ─────────────────────────────────────────────
 
-AddEventHandler('onResourceStop', function(resourceName)
-    if resourceName ~= GetCurrentResourceName() then return end
+AddEventHandler('onResourceStop', function(res)
+    if res ~= GetCurrentResourceName() then return end
     gizmoEnabled = false
     stopAnim()
-    removeProp()
+    deleteProp(1); deleteProp(2)
+    stopCamera()
+    if uiOpen then SetNuiFocus(false, false); uiOpen = false end
     lib.hideTextUI()
 end)
 
 CreateThread(function()
     Wait(1000)
-    print('[d4rk_prop_tool] Geladen. /ptool zum Starten.')
+    print('[d4rk_prop_tool] v2.0 geladen. /'..Config.Command..' zum Oeffnen.')
 end)

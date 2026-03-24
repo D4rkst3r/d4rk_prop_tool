@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>d4rk Prop Tool</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app" class="panel" style="display:none;">
+
+    <!-- Header -->
+    <div class="panel-header">
+        <span class="panel-title">&#128295; d4rk Prop Tool</span>
+        <button id="btnClose" class="btn-icon" title="Schliessen">&#x2715;</button>
+    </div>
+
+    <!-- Animations -->
+    <div class="section">
+        <div class="section-title">Animationen</div>
+        <div class="row">
+            <button id="animPrev" class="btn-nav">&#8249;</button>
+            <select id="animSelect" class="select flex1"></select>
+            <button id="animNext" class="btn-nav">&#8250;</button>
+        </div>
+        <div class="row mt4">
+            <div class="col">
+                <label>Custom Dict</label>
+                <input id="customDict" class="input" placeholder="anim@dict@...">
+            </div>
+            <div class="col ml4">
+                <label>Custom Anim</label>
+                <input id="customAnim" class="input" placeholder="clip_name">
+            </div>
+        </div>
+        <div class="row mt4" style="align-items:center; gap:6px;">
+            <label style="min-width:44px;">Flags:</label>
+            <input type="number" id="animFlags" class="input" value="49" style="width:60px;">
+            <div class="flag-presets">
+                <button class="btn-flag" data-val="1">1</button>
+                <button class="btn-flag" data-val="8">8</button>
+                <button class="btn-flag" data-val="16">16</button>
+                <button class="btn-flag" data-val="32">32</button>
+                <button class="btn-flag" data-val="49">49</button>
+                <button class="btn-flag" data-val="50">50</button>
+            </div>
+        </div>
+        <div class="row mt4">
+            <button id="btnPlayAnim" class="btn btn-green flex1">&#9654; Play</button>
+            <button id="btnStopAnim" class="btn btn-red flex1 ml4">&#9632; Stop</button>
+        </div>
+    </div>
+
+    <!-- Speed Controls -->
+    <div class="section">
+        <div class="section-title">Geschwindigkeit</div>
+        <div class="speed-row">
+            <label>Move: <span id="moveVal">0.01</span></label>
+            <input type="range" id="moveSlider" min="0.001" max="0.5" step="0.001" value="0.01">
+            <div id="movePresets" class="presets"></div>
+        </div>
+        <div class="speed-row mt4">
+            <label>Rotate: <span id="rotVal">1.0</span></label>
+            <input type="range" id="rotSlider" min="0.1" max="45.0" step="0.1" value="1.0">
+            <div id="rotPresets" class="presets"></div>
+        </div>
+    </div>
+
+    <!-- Camera -->
+    <div class="section">
+        <div class="section-title">Kamera</div>
+        <div class="row mb4">
+            <label class="mr8">Fokus:</label>
+            <select id="camFocus" class="select flex1">
+                <option value="ped">Spieler</option>
+                <option value="prop1">Prop 1</option>
+                <option value="prop2">Prop 2</option>
+            </select>
+        </div>
+        <div class="cam-row">
+            <label>Distanz: <span id="distVal">2.5</span></label>
+            <div class="row">
+                <button class="btn-nudge" data-axis="dist" data-amt="-0.2">-</button>
+                <input type="range" id="camDist" min="0.5" max="12.0" step="0.1" value="2.5" class="flex1">
+                <button class="btn-nudge" data-axis="dist" data-amt="0.2">+</button>
+            </div>
+        </div>
+        <div class="cam-row mt4">
+            <label>Winkel: <span id="angleVal">0</span>&#176;</label>
+            <div class="row">
+                <button class="btn-nudge" data-axis="angle" data-amt="-5">-</button>
+                <input type="range" id="camAngle" min="0" max="359" step="1" value="0" class="flex1">
+                <button class="btn-nudge" data-axis="angle" data-amt="5">+</button>
+            </div>
+        </div>
+        <div class="cam-row mt4">
+            <label>Hoehe: <span id="heightVal">0.5</span></label>
+            <div class="row">
+                <button class="btn-nudge" data-axis="height" data-amt="-0.1">-</button>
+                <input type="range" id="camHeight" min="-2.0" max="5.0" step="0.1" value="0.5" class="flex1">
+                <button class="btn-nudge" data-axis="height" data-amt="0.1">+</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Prop 1 -->
+    <div class="prop-panel" id="propPanel1">
+        <div class="prop-header">Prop 1</div>
+
+        <div class="section">
+            <div class="row">
+                <button id="p1Prev" class="btn-nav">&#8249;</button>
+                <select id="propSelect1" class="select flex1"></select>
+                <button id="p1Next" class="btn-nav">&#8250;</button>
+            </div>
+            <input id="customProp1" class="input mt4" placeholder="Eigenes Modell: prop_ld_jerrycan_01">
+            <div class="row mt4">
+                <button class="btn btn-green flex1 spawnBtn" data-slot="1">Spawn</button>
+                <button class="btn btn-red flex1 ml4 deleteBtn" data-slot="1">Delete</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <label>Knochen:</label>
+            <select id="boneSelect1" class="select"></select>
+            <label class="mt4">Custom Bone ID:</label>
+            <input type="number" id="customBone1" class="input" placeholder="z.B. 28422">
+            <label class="mt4">Rotation Order:</label>
+            <select id="rotOrder1" class="select">
+                <option value="0">0</option>
+                <option value="1" selected>1 (Standard)</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+            </select>
+        </div>
+
+        <div class="section">
+            <div class="ctrl-grid">
+                <div class="ctrl-group">
+                    <div class="ctrl-title">Position</div>
+                    <div class="ctrl-btns">
+                        <button class="btn-ctrl moveBtn" data-slot="1" data-dir="forward">Vor</button>
+                        <button class="btn-ctrl moveBtn" data-slot="1" data-dir="back">Zur</button>
+                        <button class="btn-ctrl moveBtn" data-slot="1" data-dir="left">Li</button>
+                        <button class="btn-ctrl moveBtn" data-slot="1" data-dir="right">Re</button>
+                        <button class="btn-ctrl moveBtn" data-slot="1" data-dir="up">Hoch</button>
+                        <button class="btn-ctrl moveBtn" data-slot="1" data-dir="down">Run</button>
+                    </div>
+                </div>
+                <div class="ctrl-group">
+                    <div class="ctrl-title">Rotation</div>
+                    <div class="ctrl-btns">
+                        <button class="btn-ctrl rotBtn" data-slot="1" data-dir="rotLeft">Li</button>
+                        <button class="btn-ctrl rotBtn" data-slot="1" data-dir="rotRight">Re</button>
+                        <button class="btn-ctrl rotBtn" data-slot="1" data-dir="rotUp">Ho</button>
+                        <button class="btn-ctrl rotBtn" data-slot="1" data-dir="rotDown">Un</button>
+                        <button class="btn-ctrl rotBtn" data-slot="1" data-dir="rotCW">CW</button>
+                        <button class="btn-ctrl rotBtn" data-slot="1" data-dir="rotCCW">CCW</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live values -->
+        <div class="live-values" id="live1">
+            <span id="lv1off">Off  X:0.0000  Y:0.0000  Z:0.0000</span><br>
+            <span id="lv1rot">Rot  X:0.00  Y:0.00  Z:0.00</span>
+        </div>
+
+        <div class="section">
+            <div class="row">
+                <button class="btn btn-orange flex1 gizmoBtn" data-slot="1">&#127919; Gizmo</button>
+                <button class="btn btn-grey flex1 ml4 resetBtn" data-slot="1">Reset</button>
+            </div>
+            <div class="row mt4">
+                <button class="btn btn-purple flex1 copyBtn" data-slot="1">&#128203; Copy</button>
+                <select class="select ml4 formatSelect" id="fmt1" style="width:90px;">
+                    <option value="default">Default</option>
+                    <option value="ox">OX</option>
+                    <option value="emotes">Emotes</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Prop 2 -->
+    <div class="prop-panel" id="propPanel2">
+        <div class="prop-header">Prop 2</div>
+
+        <div class="section">
+            <div class="row">
+                <button id="p2Prev" class="btn-nav">&#8249;</button>
+                <select id="propSelect2" class="select flex1"></select>
+                <button id="p2Next" class="btn-nav">&#8250;</button>
+            </div>
+            <input id="customProp2" class="input mt4" placeholder="Eigenes Modell: prop_ld_jerrycan_01">
+            <div class="row mt4">
+                <button class="btn btn-green flex1 spawnBtn" data-slot="2">Spawn</button>
+                <button class="btn btn-red flex1 ml4 deleteBtn" data-slot="2">Delete</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <label>Knochen:</label>
+            <select id="boneSelect2" class="select"></select>
+            <label class="mt4">Custom Bone ID:</label>
+            <input type="number" id="customBone2" class="input" placeholder="z.B. 57005">
+            <label class="mt4">Rotation Order:</label>
+            <select id="rotOrder2" class="select">
+                <option value="0">0</option>
+                <option value="1" selected>1 (Standard)</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+            </select>
+        </div>
+
+        <div class="section">
+            <div class="ctrl-grid">
+                <div class="ctrl-group">
+                    <div class="ctrl-title">Position</div>
+                    <div class="ctrl-btns">
+                        <button class="btn-ctrl moveBtn" data-slot="2" data-dir="forward">Vor</button>
+                        <button class="btn-ctrl moveBtn" data-slot="2" data-dir="back">Zur</button>
+                        <button class="btn-ctrl moveBtn" data-slot="2" data-dir="left">Li</button>
+                        <button class="btn-ctrl moveBtn" data-slot="2" data-dir="right">Re</button>
+                        <button class="btn-ctrl moveBtn" data-slot="2" data-dir="up">Hoch</button>
+                        <button class="btn-ctrl moveBtn" data-slot="2" data-dir="down">Run</button>
+                    </div>
+                </div>
+                <div class="ctrl-group">
+                    <div class="ctrl-title">Rotation</div>
+                    <div class="ctrl-btns">
+                        <button class="btn-ctrl rotBtn" data-slot="2" data-dir="rotLeft">Li</button>
+                        <button class="btn-ctrl rotBtn" data-slot="2" data-dir="rotRight">Re</button>
+                        <button class="btn-ctrl rotBtn" data-slot="2" data-dir="rotUp">Ho</button>
+                        <button class="btn-ctrl rotBtn" data-slot="2" data-dir="rotDown">Un</button>
+                        <button class="btn-ctrl rotBtn" data-slot="2" data-dir="rotCW">CW</button>
+                        <button class="btn-ctrl rotBtn" data-slot="2" data-dir="rotCCW">CCW</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live values -->
+        <div class="live-values" id="live2">
+            <span id="lv2off">Off  X:0.0000  Y:0.0000  Z:0.0000</span><br>
+            <span id="lv2rot">Rot  X:0.00  Y:0.00  Z:0.00</span>
+        </div>
+
+        <div class="section">
+            <div class="row">
+                <button class="btn btn-orange flex1 gizmoBtn" data-slot="2">&#127919; Gizmo</button>
+                <button class="btn btn-grey flex1 ml4 resetBtn" data-slot="2">Reset</button>
+            </div>
+            <div class="row mt4">
+                <button class="btn btn-purple flex1 copyBtn" data-slot="2">&#128203; Copy</button>
+                <select class="select ml4 formatSelect" id="fmt2" style="width:90px;">
+                    <option value="default">Default</option>
+                    <option value="ox">OX</option>
+                    <option value="emotes">Emotes</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Save & Reset All -->
+    <div class="section">
+        <div class="section-title">Speichern</div>
+        <input id="saveName"  class="input"    placeholder="Name (z.B. jerrycan_pour)">
+        <input id="saveNotes" class="input mt4" placeholder="Notiz (optional)">
+        <div class="row mt4">
+            <button id="btnSave"     class="btn btn-purple flex1">&#128190; Eintrag speichern</button>
+        </div>
+        <div class="row mt4">
+            <button id="btnExport"   class="btn btn-blue   flex1">&#128196; Lua Export</button>
+            <button id="btnResetAll" class="btn btn-red    flex1 ml4">&#128260; Reset All</button>
+        </div>
+    </div>
+
+    <!-- Notification -->
+    <div id="toast" class="toast"></div>
+
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
