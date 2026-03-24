@@ -1,0 +1,38 @@
+{
+    "broom1": {
+        "bone": "SKEL_L_Hand",
+        "offset": {
+            "y": 0.557229,
+            "x": 0.41477399999999,
+            "z": -0.0079145
+        },
+        "animClip": "base",
+        "boneId": 57005,
+        "notes": "test1",
+        "animDict": "anim@amb@drug_field_workers@rake@male_b@base",
+        "prop": "prop_tool_broom2",
+        "rotation": {
+            "y": -110.34637499999886,
+            "x": 21.0810240000009,
+            "z": 3.12073299999993
+        }
+    },
+    "prop_ld_jerrycan_01": {
+        "bone": "SKEL_R_Hand",
+        "offset": {
+            "y": -0.008258025,
+            "x": 0.08133630999999,
+            "z": -0.032595305
+        },
+        "animClip": "fire",
+        "boneId": 28422,
+        "notes": "test1",
+        "animDict": "weapons@first_person@aim_idle@remote_clone@misc@jerrycan@",
+        "prop": "prop_ld_jerrycan_01",
+        "rotation": {
+            "y": -94.46073300000177,
+            "x": -7.47354999999999,
+            "z": -182.32535500000086
+        }
+    }
+}
