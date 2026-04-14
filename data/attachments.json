@@ -1,38 +1,20 @@
 {
-    "bromm2": {
-        "notes": "test2",
-        "offset": {
-            "y": 0.01999999999999,
-            "x": -0.01999999999999,
-            "z": -0.565
-        },
-        "animClip": "base",
-        "animDict": "anim@amb@drug_field_workers@rake@male_b@base",
-        "bone": "SKEL_R_Hand",
+    "chainsaw": {
         "rotation": {
-            "y": 1.0,
-            "x": -38.5,
-            "z": 2.0
+            "y": 0.5,
+            "x": -85.0,
+            "z": -11.5
         },
-        "prop": "prop_tool_broom2",
-        "boneId": 28422
-    },
-    "broom3": {
-        "notes": "test3",
+        "notes": "",
+        "boneId": 28422,
+        "prop": "d4rk_prop_chainsaw",
+        "animDict": "weapons@first_person@aim_idle@remote_clone@heavy@minigun@",
+        "animClip": "settle_med",
         "offset": {
-            "y": 0.01999999999999,
-            "x": -0.01999999999999,
-            "z": -0.565
+            "y": -0.03,
+            "x": 0.324,
+            "z": -0.01
         },
-        "animClip": "base",
-        "animDict": "anim@amb@drug_field_workers@rake@male_b@base",
-        "bone": "SKEL_R_Hand",
-        "rotation": {
-            "y": 1.0,
-            "x": -38.5,
-            "z": 2.0
-        },
-        "prop": "prop_tool_broom2",
-        "boneId": 28422
+        "bone": "SKEL_R_Hand"
     }
 }
