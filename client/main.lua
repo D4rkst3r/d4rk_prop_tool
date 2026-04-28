@@ -47,52 +47,8 @@ local MAX_HISTORY = 20
 local history      = { [1] = {}, [2] = {} }
 local historyIdx   = { [1] = 0,  [2] = 0  }
 
-local function pushHistory(slot)
-    local p = props[slot]
-    local h = history[slot]
-    while #h > historyIdx[slot] do table.remove(h) end
-    historyIdx[slot] = historyIdx[slot] + 1
-    h[historyIdx[slot]] = {
-        offset   = { x=p.offset.x,   y=p.offset.y,   z=p.offset.z },
-        rotation = { x=p.rotation.x, y=p.rotation.y, z=p.rotation.z },
-    }
-    if #h > MAX_HISTORY then
-        table.remove(h, 1)
-        historyIdx[slot] = historyIdx[slot] - 1
-    end
-end
-
-local function applyHistoryState(slot)
-    local p     = props[slot]
-    local state = history[slot][historyIdx[slot]]
-    if not state then return end
-    p.offset   = { x=state.offset.x,   y=state.offset.y,   z=state.offset.z }
-    p.rotation = { x=state.rotation.x, y=state.rotation.y, z=state.rotation.z }
-    attachProp(slot)
-end
-
-local function undoSlot(slot)
-    if historyIdx[slot] <= 1 then
-        lib.notify({ title='Prop Tool', description='Nichts mehr rueckgaengig.', type='inform', duration=1200 })
-        return
-    end
-    historyIdx[slot] = historyIdx[slot] - 1
-    applyHistoryState(slot)
-end
-
-local function redoSlot(slot)
-    if historyIdx[slot] >= #history[slot] then
-        lib.notify({ title='Prop Tool', description='Nichts mehr wiederholen.', type='inform', duration=1200 })
-        return
-    end
-    historyIdx[slot] = historyIdx[slot] + 1
-    applyHistoryState(slot)
-end
-
-local function clearHistory(slot)
-    history[slot]    = {}
-    historyIdx[slot] = 0
-end
+-- Funktionen werden nach attachProp definiert (Lua forward-scope)
+local pushHistory, undoSlot, redoSlot, clearHistory
 
 -- ─────────────────────────────────────────────
 --  Helpers
@@ -147,6 +103,57 @@ local function stopAnim()
         StopAnimTask(PlayerPedId(), currentAnim.dict, currentAnim.clip, 1.0)
         currentAnim = nil
     end
+end
+
+-- ─────────────────────────────────────────────
+--  Undo / Redo (nach attachProp definiert)
+-- ─────────────────────────────────────────────
+
+pushHistory = function(slot)
+    local p = props[slot]
+    local h = history[slot]
+    while #h > historyIdx[slot] do table.remove(h) end
+    historyIdx[slot] = historyIdx[slot] + 1
+    h[historyIdx[slot]] = {
+        offset   = { x=p.offset.x,   y=p.offset.y,   z=p.offset.z },
+        rotation = { x=p.rotation.x, y=p.rotation.y, z=p.rotation.z },
+    }
+    if #h > MAX_HISTORY then
+        table.remove(h, 1)
+        historyIdx[slot] = historyIdx[slot] - 1
+    end
+end
+
+local function applyHistoryState(slot)
+    local p     = props[slot]
+    local state = history[slot][historyIdx[slot]]
+    if not state then return end
+    p.offset   = { x=state.offset.x,   y=state.offset.y,   z=state.offset.z }
+    p.rotation = { x=state.rotation.x, y=state.rotation.y, z=state.rotation.z }
+    attachProp(slot)
+end
+
+undoSlot = function(slot)
+    if historyIdx[slot] <= 1 then
+        lib.notify({ title='Prop Tool', description='Nichts mehr rueckgaengig.', type='inform', duration=1200 })
+        return
+    end
+    historyIdx[slot] = historyIdx[slot] - 1
+    applyHistoryState(slot)
+end
+
+redoSlot = function(slot)
+    if historyIdx[slot] >= #history[slot] then
+        lib.notify({ title='Prop Tool', description='Nichts mehr wiederholen.', type='inform', duration=1200 })
+        return
+    end
+    historyIdx[slot] = historyIdx[slot] + 1
+    applyHistoryState(slot)
+end
+
+clearHistory = function(slot)
+    history[slot]    = {}
+    historyIdx[slot] = 0
 end
 
 -- ─────────────────────────────────────────────
