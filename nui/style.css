@@ -307,6 +307,74 @@ input[type="range"] {
 .toast.error   { background: rgba(140,30,30,0.95); }
 .toast.info    { background: rgba(30,80,140,0.95); }
 
+/* ─── Undo / Redo ───────────────────────────── */
+.btn-undo { background: #2a3a5a; }
+.btn-undo:hover { filter: brightness(1.2); }
+
+/* ─── Presets Section ───────────────────────── */
+.presets-toggle {
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.2s;
+}
+.presets-toggle:hover { color: #ccc; }
+
+.preset-list { margin-top: 6px; }
+
+.preset-empty {
+    font-size: 11px;
+    color: #555;
+    padding: 4px 0;
+    text-align: center;
+}
+
+.preset-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 5px 4px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    gap: 6px;
+}
+.preset-row:last-child { border-bottom: none; }
+
+.preset-info {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    flex: 1;
+    min-width: 0;
+}
+
+.preset-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: #ddd;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.preset-model {
+    font-size: 10px;
+    color: #666;
+    font-family: 'Consolas', monospace;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.preset-btns { display: flex; gap: 4px; flex-shrink: 0; }
+
+.btn-preset-load {
+    background: #1a4a6a;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    min-width: 28px;
+}
+.btn-preset-load:hover { filter: brightness(1.25); }
+
 /* ─── Utilities ─────────────────────────── */
 .row   { display: flex; align-items: center; gap: 6px; }
 .col   { flex: 1; }

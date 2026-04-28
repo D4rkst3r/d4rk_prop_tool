@@ -40,6 +40,61 @@ local MAX_SCALE  = 50.0
 local cachedAttachments = {}
 
 -- ─────────────────────────────────────────────
+--  Undo / Redo
+-- ─────────────────────────────────────────────
+
+local MAX_HISTORY = 20
+local history      = { [1] = {}, [2] = {} }
+local historyIdx   = { [1] = 0,  [2] = 0  }
+
+local function pushHistory(slot)
+    local p = props[slot]
+    local h = history[slot]
+    while #h > historyIdx[slot] do table.remove(h) end
+    historyIdx[slot] = historyIdx[slot] + 1
+    h[historyIdx[slot]] = {
+        offset   = { x=p.offset.x,   y=p.offset.y,   z=p.offset.z },
+        rotation = { x=p.rotation.x, y=p.rotation.y, z=p.rotation.z },
+    }
+    if #h > MAX_HISTORY then
+        table.remove(h, 1)
+        historyIdx[slot] = historyIdx[slot] - 1
+    end
+end
+
+local function applyHistoryState(slot)
+    local p     = props[slot]
+    local state = history[slot][historyIdx[slot]]
+    if not state then return end
+    p.offset   = { x=state.offset.x,   y=state.offset.y,   z=state.offset.z }
+    p.rotation = { x=state.rotation.x, y=state.rotation.y, z=state.rotation.z }
+    attachProp(slot)
+end
+
+local function undoSlot(slot)
+    if historyIdx[slot] <= 1 then
+        lib.notify({ title='Prop Tool', description='Nichts mehr rueckgaengig.', type='inform', duration=1200 })
+        return
+    end
+    historyIdx[slot] = historyIdx[slot] - 1
+    applyHistoryState(slot)
+end
+
+local function redoSlot(slot)
+    if historyIdx[slot] >= #history[slot] then
+        lib.notify({ title='Prop Tool', description='Nichts mehr wiederholen.', type='inform', duration=1200 })
+        return
+    end
+    historyIdx[slot] = historyIdx[slot] + 1
+    applyHistoryState(slot)
+end
+
+local function clearHistory(slot)
+    history[slot]    = {}
+    historyIdx[slot] = 0
+end
+
+-- ─────────────────────────────────────────────
 --  Helpers
 -- ─────────────────────────────────────────────
 
@@ -350,7 +405,9 @@ local function startGizmo(slot)
             p.rotation = savedRot
             lib.notify({ title='Prop Tool', description='Gizmo abgebrochen.', type='error' })
         else
+            pushHistory(slot)
             computeFromWorld(slot)
+            pushHistory(slot)
             lib.notify({ title='Prop Tool', description='Gizmo fertig.', type='success' })
         end
 
@@ -481,6 +538,7 @@ function openUI()
         camDist      = camData.dist,
         camAngle     = camData.angle,
         camHeight    = camData.height,
+        presets      = cachedAttachments,
     })
     SetNuiFocus(true, true)
     startCamera()
@@ -517,6 +575,8 @@ RegisterNUICallback('spawnProp', function(data, cb)
     SetModelAsNoLongerNeeded(mdl)
     props[slot].entity = ent
     props[slot].model  = model
+    clearHistory(slot)
+    pushHistory(slot)
     attachProp(slot)
     SendNUIMessage({ type='toast', msg='Prop '..model..' gespawnt', style='success' })
     cb({})
@@ -597,15 +657,18 @@ end)
 RegisterNUICallback('startGizmo', function(data, cb) startGizmo(data.slot) cb({}) end)
 
 RegisterNUICallback('resetProp', function(data, cb)
-    local p = props[data.slot]
+    local slot = data.slot
+    pushHistory(slot)
+    local p = props[slot]
     p.offset   = { x=0.0, y=0.0, z=0.0 }
     p.rotation = { x=0.0, y=0.0, z=0.0 }
-    attachProp(data.slot)
+    attachProp(slot)
     cb({})
 end)
 
 RegisterNUICallback('resetAll', function(_, cb)
     for slot = 1, 2 do
+        pushHistory(slot)
         props[slot].offset   = { x=0.0, y=0.0, z=0.0 }
         props[slot].rotation = { x=0.0, y=0.0, z=0.0 }
         attachProp(slot)
@@ -617,6 +680,73 @@ end)
 
 RegisterNUICallback('copyData', function(data, cb)
     SendNUIMessage({ type='clipboard', text=generateCopyText(data.slot, data.format) })
+    cb({})
+end)
+
+RegisterNUICallback('quickCopy', function(data, cb)
+    local p = props[data.slot]
+    local o = p.offset
+    local r = p.rotation
+    local text = string.format(
+        '-- %s  bone:%d\noffset   = vec3(%.4f, %.4f, %.4f)\nrotation = vec3(%.4f, %.4f, %.4f)',
+        p.model ~= '' and p.model or 'no_prop', p.boneId,
+        o.x, o.y, o.z, r.x, r.y, r.z
+    )
+    SendNUIMessage({ type='clipboard', text=text })
+    cb({})
+end)
+
+RegisterNUICallback('startMove', function(data, cb)
+    pushHistory(data.slot)
+    cb({})
+end)
+
+RegisterNUICallback('undo', function(data, cb)
+    undoSlot(data.slot)
+    cb({})
+end)
+
+RegisterNUICallback('redo', function(data, cb)
+    redoSlot(data.slot)
+    cb({})
+end)
+
+RegisterNUICallback('loadPreset', function(data, cb)
+    local name = data.name
+    local slot = data.slot
+    local all  = loadAttachments()
+    local preset = all[name]
+    if not preset then
+        SendNUIMessage({ type='toast', msg='Preset nicht gefunden: '..name, style='error' })
+        cb({}); return
+    end
+    pushHistory(slot)
+    local p = props[slot]
+    p.offset   = { x=preset.offset.x,   y=preset.offset.y,   z=preset.offset.z }
+    p.rotation = { x=preset.rotation.x, y=preset.rotation.y, z=preset.rotation.z }
+    for _, b in ipairs(Config.Bones) do
+        if b.id == preset.boneId then p.boneId = preset.boneId; p.bone = b.name; break end
+    end
+    if (not p.entity or not DoesEntityExist(p.entity)) and preset.prop and preset.prop ~= '' then
+        CreateThread(function()
+            local mdl = requestModel(preset.prop)
+            if mdl then
+                local ped    = PlayerPedId()
+                local coords = GetEntityCoords(ped)
+                local ent    = CreateObject(mdl, coords.x, coords.y, coords.z, false, false, false)
+                SetEntityNoCollisionEntity(ent, ped, true)
+                SetEntityAsMissionEntity(ent, true, true)
+                SetModelAsNoLongerNeeded(mdl)
+                p.entity = ent
+                p.model  = preset.prop
+                attachProp(slot)
+                SendNUIMessage({ type='toast', msg='Preset "'..name..'" in Slot '..slot..' geladen', style='success' })
+            end
+        end)
+    else
+        attachProp(slot)
+        SendNUIMessage({ type='toast', msg='Preset "'..name..'" in Slot '..slot..' geladen', style='success' })
+    end
     cb({})
 end)
 
@@ -637,6 +767,7 @@ RegisterNUICallback('saveEntry', function(data, cb)
         notes    = data.notes or '',
     }
     saveAttachments(all)
+    SendNUIMessage({ type='updatePresets', presets=all })
     cb({})
 end)
 
@@ -731,6 +862,10 @@ end)
 -- ─────────────────────────────────────────────
 
 RegisterCommand(Config.Command, function(source, args)
+    if Config.OnlyAdmins and not IsPlayerAceAllowed('player', 'd4rk_prop_tool.use') then
+        lib.notify({ title='Prop Tool', description='Kein Zugriff.', type='error' })
+        return
+    end
     local sub = args[1]
     if not sub or sub == '' then
         if uiOpen then closeUI() else openUI() end
