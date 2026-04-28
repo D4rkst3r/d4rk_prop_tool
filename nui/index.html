@@ -108,6 +108,7 @@
         <div class="prop-header">Prop 1</div>
 
         <div class="section">
+            <input id="propSearch1" class="input mb4" placeholder="&#128269; Prop suchen...">
             <div class="row">
                 <button id="p1Prev" class="btn-nav">&#8249;</button>
                 <select id="propSelect1" class="select flex1"></select>
@@ -175,12 +176,17 @@
                 <button class="btn btn-grey flex1 ml4 resetBtn" data-slot="1">Reset</button>
             </div>
             <div class="row mt4">
+                <button class="btn btn-undo flex1 undoBtn" data-slot="1">&#8630; Undo</button>
+                <button class="btn btn-undo flex1 ml4 redoBtn" data-slot="1">&#8631; Redo</button>
+            </div>
+            <div class="row mt4">
                 <button class="btn btn-purple flex1 copyBtn" data-slot="1">&#128203; Copy</button>
                 <select class="select ml4 formatSelect" id="fmt1" style="width:90px;">
                     <option value="default">Default</option>
                     <option value="ox">OX</option>
                     <option value="emotes">Emotes</option>
                 </select>
+                <button class="btn btn-grey ml4 quickCopyBtn" data-slot="1" title="Aktuelle Werte kopieren" style="min-width:36px;">&#9889;</button>
             </div>
         </div>
     </div>
@@ -190,6 +196,7 @@
         <div class="prop-header">Prop 2</div>
 
         <div class="section">
+            <input id="propSearch2" class="input mb4" placeholder="&#128269; Prop suchen...">
             <div class="row">
                 <button id="p2Prev" class="btn-nav">&#8249;</button>
                 <select id="propSelect2" class="select flex1"></select>
@@ -257,14 +264,27 @@
                 <button class="btn btn-grey flex1 ml4 resetBtn" data-slot="2">Reset</button>
             </div>
             <div class="row mt4">
+                <button class="btn btn-undo flex1 undoBtn" data-slot="2">&#8630; Undo</button>
+                <button class="btn btn-undo flex1 ml4 redoBtn" data-slot="2">&#8631; Redo</button>
+            </div>
+            <div class="row mt4">
                 <button class="btn btn-purple flex1 copyBtn" data-slot="2">&#128203; Copy</button>
                 <select class="select ml4 formatSelect" id="fmt2" style="width:90px;">
                     <option value="default">Default</option>
                     <option value="ox">OX</option>
                     <option value="emotes">Emotes</option>
                 </select>
+                <button class="btn btn-grey ml4 quickCopyBtn" data-slot="2" title="Aktuelle Werte kopieren" style="min-width:36px;">&#9889;</button>
             </div>
         </div>
+    </div>
+
+    <!-- Gespeicherte Presets -->
+    <div class="section">
+        <div class="section-title presets-toggle" id="presetsToggle">
+            &#128190; Gespeicherte Presets <span id="presetsArrow">&#9660;</span>
+        </div>
+        <div id="presetsList" class="preset-list"></div>
     </div>
 
     <!-- Save & Reset All -->

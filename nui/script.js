@@ -42,8 +42,9 @@ function copyText(text) {
 // ─── Hold-to-repeat ────────────────────────────────────────────
 let holdInterval = null;
 
-function holdRepeat(el, fn) {
+function holdRepeat(el, fn, startFn) {
     el.addEventListener('mousedown', () => {
+        if (startFn) startFn();
         fn();
         holdInterval = setInterval(fn, 60);
     });
@@ -57,6 +58,85 @@ let propList  = [];
 let propIdx   = [0, 0];
 let animList  = [];
 let animIdx   = 0;
+
+// ─── Prop Search / Filter ──────────────────────────────────────
+function filterPropSelect(slot, searchTerm) {
+    const i   = slot - 1;
+    const sel = document.getElementById('propSelect' + slot);
+    const term = searchTerm.toLowerCase().trim();
+    sel.innerHTML = '';
+    propList.forEach((p, fullIdx) => {
+        if (!term || p.toLowerCase().includes(term)) {
+            const opt = document.createElement('option');
+            opt.value = fullIdx;
+            opt.textContent = p;
+            sel.appendChild(opt);
+        }
+    });
+    // Versuche bisherige Auswahl zu behalten
+    sel.value = propIdx[i];
+    if (sel.value === '' && sel.options.length > 0) {
+        sel.selectedIndex = 0;
+        propIdx[i] = parseInt(sel.options[0].value) || 0;
+    }
+}
+
+document.getElementById('propSearch1').addEventListener('input', (e) => {
+    filterPropSelect(1, e.target.value);
+});
+document.getElementById('propSearch2').addEventListener('input', (e) => {
+    filterPropSelect(2, e.target.value);
+});
+
+// ─── Presets ───────────────────────────────────────────────────
+let presetsOpen = true;
+
+document.getElementById('presetsToggle').addEventListener('click', () => {
+    presetsOpen = !presetsOpen;
+    document.getElementById('presetsList').style.display = presetsOpen ? 'block' : 'none';
+    document.getElementById('presetsArrow').textContent  = presetsOpen ? '▾' : '▸';
+});
+
+function buildPresetList(presets) {
+    const list = document.getElementById('presetsList');
+    list.innerHTML = '';
+    const keys = Object.keys(presets || {});
+    if (keys.length === 0) {
+        list.innerHTML = '<div class="preset-empty">Keine Eintraege gespeichert.</div>';
+        return;
+    }
+    keys.sort().forEach((name) => {
+        const e    = presets[name];
+        const row  = document.createElement('div');
+        row.className = 'preset-row';
+
+        const info = document.createElement('div');
+        info.className = 'preset-info';
+        info.innerHTML = '<span class="preset-name">' + name + '</span>'
+            + '<span class="preset-model">' + (e.prop || '?') + '</span>';
+
+        const btns = document.createElement('div');
+        btns.className = 'preset-btns';
+
+        const b1 = document.createElement('button');
+        b1.className = 'btn btn-preset-load';
+        b1.textContent = 'S1';
+        b1.title = 'In Slot 1 laden';
+        b1.addEventListener('click', () => send('loadPreset', { name, slot: 1 }));
+
+        const b2 = document.createElement('button');
+        b2.className = 'btn btn-preset-load';
+        b2.textContent = 'S2';
+        b2.title = 'In Slot 2 laden';
+        b2.addEventListener('click', () => send('loadPreset', { name, slot: 2 }));
+
+        btns.appendChild(b1);
+        btns.appendChild(b2);
+        row.appendChild(info);
+        row.appendChild(btns);
+        list.appendChild(row);
+    });
+}
 
 // ─── Init UI from Lua ──────────────────────────────────────────
 window.addEventListener('message', (e) => {
@@ -76,9 +156,11 @@ window.addEventListener('message', (e) => {
 
         // Props
         propList = d.props || [];
-        propIdx = [0, 0];
-        buildPropSelect('propSelect1', 0);
-        buildPropSelect('propSelect2', 0);
+        propIdx  = [0, 0];
+        document.getElementById('propSearch1').value = '';
+        document.getElementById('propSearch2').value = '';
+        filterPropSelect(1, '');
+        filterPropSelect(2, '');
 
         // Speeds
         const ms = d.moveSpeed || 0.01;
@@ -108,6 +190,9 @@ window.addEventListener('message', (e) => {
         document.getElementById('distVal').textContent   = d.camDist   || 2.5;
         document.getElementById('angleVal').textContent  = d.camAngle  || 0;
         document.getElementById('heightVal').textContent = d.camHeight || 0.5;
+
+        // Presets
+        buildPresetList(d.presets || {});
     }
 
     if (d.type === 'hideUI') {
@@ -125,6 +210,10 @@ window.addEventListener('message', (e) => {
 
     if (d.type === 'toast') {
         showToast(d.msg, d.style || 'info');
+    }
+
+    if (d.type === 'updatePresets') {
+        buildPresetList(d.presets || {});
     }
 });
 
@@ -299,12 +388,23 @@ function setupPropNav(slot) {
         if (!propList.length) return;
         propIdx[i] = (propIdx[i] - 1 + propList.length) % propList.length;
         document.getElementById(selId).value = propIdx[i];
+        // Falls aktueller Wert nicht in gefilterter Liste: Filter leeren
+        if (document.getElementById(selId).value === '') {
+            document.getElementById('propSearch' + slot).value = '';
+            filterPropSelect(slot, '');
+            document.getElementById(selId).value = propIdx[i];
+        }
     });
 
     document.getElementById(nextId).addEventListener('click', () => {
         if (!propList.length) return;
         propIdx[i] = (propIdx[i] + 1) % propList.length;
         document.getElementById(selId).value = propIdx[i];
+        if (document.getElementById(selId).value === '') {
+            document.getElementById('propSearch' + slot).value = '';
+            filterPropSelect(slot, '');
+            document.getElementById(selId).value = propIdx[i];
+        }
     });
 
     document.getElementById(selId).addEventListener('change', (e) => {
@@ -318,8 +418,8 @@ setupPropNav(2);
 // ─── Spawn / Delete ────────────────────────────────────────────
 document.querySelectorAll('.spawnBtn').forEach((btn) => {
     btn.addEventListener('click', () => {
-        const slot = parseInt(btn.dataset.slot);
-        const i    = slot - 1;
+        const slot   = parseInt(btn.dataset.slot);
+        const i      = slot - 1;
         const custom = document.getElementById('customProp' + slot).value.trim();
         const model  = custom || propList[propIdx[i]] || '';
         if (!model) return showToast('Kein Modell ausgewaehlt', 'error');
@@ -357,14 +457,15 @@ document.getElementById('rotOrder2').addEventListener('change', (e) => {
     send('setRotOrder', { slot: 2, order: parseInt(e.target.value) });
 });
 
-// ─── Move / Rotate Buttons (hold-repeat) ──────────────────────
+// ─── Move / Rotate Buttons (hold-repeat + startMove fuer Undo) ─
 document.querySelectorAll('.moveBtn, .rotBtn').forEach((btn) => {
-    holdRepeat(btn, () => {
-        send('moveProp', {
-            slot: parseInt(btn.dataset.slot),
-            dir:  btn.dataset.dir,
-        });
-    });
+    const slot = parseInt(btn.dataset.slot);
+    const dir  = btn.dataset.dir;
+    holdRepeat(
+        btn,
+        () => send('moveProp', { slot, dir }),
+        () => send('startMove', { slot })
+    );
 });
 
 // ─── Gizmo / Reset / Copy ──────────────────────────────────────
@@ -386,6 +487,19 @@ document.querySelectorAll('.copyBtn').forEach((btn) => {
         const fmt  = document.getElementById('fmt' + slot).value;
         send('copyData', { slot, format: fmt });
     });
+});
+
+// ─── Undo / Redo ───────────────────────────────────────────────
+document.querySelectorAll('.undoBtn').forEach((btn) => {
+    btn.addEventListener('click', () => send('undo', { slot: parseInt(btn.dataset.slot) }));
+});
+document.querySelectorAll('.redoBtn').forEach((btn) => {
+    btn.addEventListener('click', () => send('redo', { slot: parseInt(btn.dataset.slot) }));
+});
+
+// ─── Quick Copy (aktuelle Live-Werte) ──────────────────────────
+document.querySelectorAll('.quickCopyBtn').forEach((btn) => {
+    btn.addEventListener('click', () => send('quickCopy', { slot: parseInt(btn.dataset.slot) }));
 });
 
 // ─── Save / Export / Reset All ─────────────────────────────────
