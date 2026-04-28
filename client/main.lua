@@ -19,6 +19,10 @@ local props = {
             offset={x=0.0,y=0.0,z=0.0}, rotation={x=0.0,y=0.0,z=0.0} },
 }
 
+local history = { {}, {} }
+local historyIdx = { 0, 0 }
+local MAX_HISTORY = 100
+
 local currentAnim = nil
 local moveSpeed   = Config.DefaultMoveSpeed   or 0.01
 local rotateSpeed = Config.DefaultRotateSpeed or 1.0
@@ -38,61 +42,6 @@ local MIN_SCALE  = 0.05
 local MAX_SCALE  = 50.0
 
 local cachedAttachments = {}
-
--- ─────────────────────────────────────────────
---  Undo / Redo
--- ─────────────────────────────────────────────
-
-local MAX_HISTORY = 20
-local history      = { [1] = {}, [2] = {} }
-local historyIdx   = { [1] = 0,  [2] = 0  }
-
-local function pushHistory(slot)
-    local p = props[slot]
-    local h = history[slot]
-    while #h > historyIdx[slot] do table.remove(h) end
-    historyIdx[slot] = historyIdx[slot] + 1
-    h[historyIdx[slot]] = {
-        offset   = { x=p.offset.x,   y=p.offset.y,   z=p.offset.z },
-        rotation = { x=p.rotation.x, y=p.rotation.y, z=p.rotation.z },
-    }
-    if #h > MAX_HISTORY then
-        table.remove(h, 1)
-        historyIdx[slot] = historyIdx[slot] - 1
-    end
-end
-
-local function applyHistoryState(slot)
-    local p     = props[slot]
-    local state = history[slot][historyIdx[slot]]
-    if not state then return end
-    p.offset   = { x=state.offset.x,   y=state.offset.y,   z=state.offset.z }
-    p.rotation = { x=state.rotation.x, y=state.rotation.y, z=state.rotation.z }
-    attachProp(slot)
-end
-
-local function undoSlot(slot)
-    if historyIdx[slot] <= 1 then
-        lib.notify({ title='Prop Tool', description='Nichts mehr rueckgaengig.', type='inform', duration=1200 })
-        return
-    end
-    historyIdx[slot] = historyIdx[slot] - 1
-    applyHistoryState(slot)
-end
-
-local function redoSlot(slot)
-    if historyIdx[slot] >= #history[slot] then
-        lib.notify({ title='Prop Tool', description='Nichts mehr wiederholen.', type='inform', duration=1200 })
-        return
-    end
-    historyIdx[slot] = historyIdx[slot] + 1
-    applyHistoryState(slot)
-end
-
-local function clearHistory(slot)
-    history[slot]    = {}
-    historyIdx[slot] = 0
-end
 
 -- ─────────────────────────────────────────────
 --  Helpers
@@ -148,6 +97,58 @@ local function stopAnim()
         currentAnim = nil
     end
 end
+
+-- ─────────────────────────────────────────────
+--  Undo / Redo
+-- ─────────────────────────────────────────────
+
+pushHistory = function(slot)
+    local p = props[slot]
+    local h = history[slot]
+    while #h > historyIdx[slot] do table.remove(h) end
+    historyIdx[slot] = historyIdx[slot] + 1
+    h[historyIdx[slot]] = {
+        offset   = { x=p.offset.x,   y=p.offset.y,   z=p.offset.z },
+        rotation = { x=p.rotation.x, y=p.rotation.y, z=p.rotation.z },
+    }
+    if #h > MAX_HISTORY then
+        table.remove(h, 1)
+        historyIdx[slot] = historyIdx[slot] - 1
+    end
+end
+
+local function applyHistoryState(slot)
+    local p     = props[slot]
+    local state = history[slot][historyIdx[slot]]
+    if not state then return end
+    p.offset   = { x=state.offset.x,   y=state.offset.y,   z=state.offset.z }
+    p.rotation = { x=state.rotation.x, y=state.rotation.y, z=state.rotation.z }
+    attachProp(slot)
+end
+
+undoSlot = function(slot)
+    if historyIdx[slot] <= 1 then
+        lib.notify({ title='Prop Tool', description='Nichts mehr rueckgaengig.', type='inform', duration=1200 })
+        return
+    end
+    historyIdx[slot] = historyIdx[slot] - 1
+    applyHistoryState(slot)
+end
+
+redoSlot = function(slot)
+    if historyIdx[slot] >= #history[slot] then
+        lib.notify({ title='Prop Tool', description='Nichts mehr wiederholen.', type='inform', duration=1200 })
+        return
+    end
+    historyIdx[slot] = historyIdx[slot] + 1
+    applyHistoryState(slot)
+end
+
+clearHistory = function(slot)
+    history[slot]    = {}
+    historyIdx[slot] = 0
+end
+
 
 -- ─────────────────────────────────────────────
 --  Camera
@@ -447,9 +448,19 @@ local function saveAttachments(data)
     TriggerServerEvent('d4rk_prop_tool:saveAttachments', json.encode(data, { indent=true }))
 end
 
+RegisterNetEvent('d4rk_prop_tool:receiveAttachments')
 AddEventHandler('d4rk_prop_tool:receiveAttachments', function(raw)
     local ok, data = pcall(json.decode, raw)
-    cachedAttachments = ok and data or {}
+    if not ok then
+        print('[d4rk_prop_tool] Ungueltige attachments.json erhalten, Presets werden nicht geladen.')
+        lib.notify({ title='Prop Tool', description='Fehler beim Laden von attachments.json', type='error', duration=4000 })
+        cachedAttachments = {}
+    else
+        cachedAttachments = data
+        if uiOpen then
+            SendNUIMessage({ type='updatePresets', presets=cachedAttachments })
+        end
+    end
 end)
 
 CreateThread(function()
