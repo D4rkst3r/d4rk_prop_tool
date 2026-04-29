@@ -100,6 +100,8 @@ document.getElementById('presetsToggle').addEventListener('click', () => {
     document.getElementById('presetsArrow').textContent  = presetsOpen ? '▾' : '▸';
 });
 
+function fmtV(v) { return (v >= 0 ? '+' : '') + parseFloat(v).toFixed(4); }
+
 function buildPresetList(presets) {
     const list = document.getElementById('presetsList');
     list.innerHTML = '';
@@ -109,8 +111,12 @@ function buildPresetList(presets) {
         return;
     }
     keys.sort().forEach((name) => {
-        const e    = presets[name];
-        const row  = document.createElement('div');
+        const e = presets[name];
+        const wrap = document.createElement('div');
+        wrap.className = 'preset-wrap';
+
+        // ── Kopfzeile ──────────────────────────────────────────
+        const row = document.createElement('div');
         row.className = 'preset-row';
 
         const info = document.createElement('div');
@@ -120,6 +126,11 @@ function buildPresetList(presets) {
 
         const btns = document.createElement('div');
         btns.className = 'preset-btns';
+
+        const bToggle = document.createElement('button');
+        bToggle.className = 'btn btn-preset-toggle';
+        bToggle.textContent = '▾';
+        bToggle.title = 'Details anzeigen';
 
         const b1 = document.createElement('button');
         b1.className = 'btn btn-preset-load';
@@ -133,11 +144,45 @@ function buildPresetList(presets) {
         b2.title = 'In Slot 2 laden';
         b2.addEventListener('click', () => send('loadPreset', { name, slot: 2 }));
 
+        btns.appendChild(bToggle);
         btns.appendChild(b1);
         btns.appendChild(b2);
         row.appendChild(info);
         row.appendChild(btns);
-        list.appendChild(row);
+
+        // ── Detail-Block ───────────────────────────────────────
+        const detail = document.createElement('div');
+        detail.className = 'preset-detail';
+
+        const o = e.offset   || {};
+        const r = e.rotation || {};
+        const hasAnim = e.animDict && e.animDict !== '';
+
+        detail.innerHTML =
+            '<div class="pd-row"><span class="pd-label">Bone</span><span class="pd-value">'
+                + (e.bone || '?') + ' <span class="pd-id">(' + (e.boneId || '?') + ')</span></span></div>'
+            + '<div class="pd-row"><span class="pd-label">Offset</span><span class="pd-value mono">'
+                + 'X:' + fmtV(o.x||0) + '  Y:' + fmtV(o.y||0) + '  Z:' + fmtV(o.z||0) + '</span></div>'
+            + '<div class="pd-row"><span class="pd-label">Rotation</span><span class="pd-value mono">'
+                + 'X:' + fmtV(r.x||0) + '  Y:' + fmtV(r.y||0) + '  Z:' + fmtV(r.z||0) + '</span></div>'
+            + (hasAnim
+                ? '<div class="pd-row"><span class="pd-label">Anim</span><span class="pd-value mono anim-val">'
+                    + e.animDict + '<br>' + e.animClip + '</span></div>'
+                : '')
+            + (e.notes
+                ? '<div class="pd-row"><span class="pd-label">Notiz</span><span class="pd-value pd-notes">'
+                    + e.notes + '</span></div>'
+                : '');
+
+        // Toggle
+        bToggle.addEventListener('click', () => {
+            const open = detail.classList.toggle('open');
+            bToggle.textContent = open ? '▴' : '▾';
+        });
+
+        wrap.appendChild(row);
+        wrap.appendChild(detail);
+        list.appendChild(wrap);
     });
 }
 
