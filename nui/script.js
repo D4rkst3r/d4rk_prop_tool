@@ -2,10 +2,13 @@
 
 // ─── NUI Bridge ────────────────────────────────────────────────
 function send(event, data) {
-    fetch('https://' + GetParentResourceName() + '/' + event, {
+    const resourceName = GetParentResourceName ? GetParentResourceName() : 'd4rk_prop_tool';
+    fetch('https://' + resourceName + '/' + event, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data || {})
+    }).catch(err => {
+        console.error('NUI Fetch failed for event:', event, 'Resource:', resourceName, err);
     });
 }
 

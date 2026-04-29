@@ -1,7 +1,7 @@
 Config = {}
 
 Config.Command       = 'ptool'
-Config.OnlyAdmins    = true   -- true = nur ACE permission 'd4rk_prop_tool.use'
+Config.OnlyAdmins    = false   -- true = nur ACE permission 'd4rk_prop_tool.use'
 
 Config.DefaultMoveSpeed   = 0.01
 Config.DefaultRotateSpeed = 1.0

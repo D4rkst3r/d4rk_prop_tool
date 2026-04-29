@@ -19,6 +19,10 @@ local props = {
             offset={x=0.0,y=0.0,z=0.0}, rotation={x=0.0,y=0.0,z=0.0} },
 }
 
+local history = { {}, {} }
+local historyIdx = { 0, 0 }
+local MAX_HISTORY = 100
+
 local currentAnim = nil
 local moveSpeed   = Config.DefaultMoveSpeed   or 0.01
 local rotateSpeed = Config.DefaultRotateSpeed or 1.0
@@ -38,17 +42,6 @@ local MIN_SCALE  = 0.05
 local MAX_SCALE  = 50.0
 
 local cachedAttachments = {}
-
--- ─────────────────────────────────────────────
---  Undo / Redo
--- ─────────────────────────────────────────────
-
-local MAX_HISTORY = 20
-local history      = { [1] = {}, [2] = {} }
-local historyIdx   = { [1] = 0,  [2] = 0  }
-
--- Funktionen werden nach attachProp definiert (Lua forward-scope)
-local pushHistory, undoSlot, redoSlot, clearHistory
 
 -- ─────────────────────────────────────────────
 --  Helpers
@@ -106,7 +99,7 @@ local function stopAnim()
 end
 
 -- ─────────────────────────────────────────────
---  Undo / Redo (nach attachProp definiert)
+--  Undo / Redo
 -- ─────────────────────────────────────────────
 
 pushHistory = function(slot)
@@ -454,9 +447,19 @@ local function saveAttachments(data)
     TriggerServerEvent('d4rk_prop_tool:saveAttachments', json.encode(data, { indent=true }))
 end
 
+RegisterNetEvent('d4rk_prop_tool:receiveAttachments')
 AddEventHandler('d4rk_prop_tool:receiveAttachments', function(raw)
     local ok, data = pcall(json.decode, raw)
-    cachedAttachments = ok and data or {}
+    if not ok then
+        print('[d4rk_prop_tool] Ungueltige attachments.json erhalten, Presets werden nicht geladen.')
+        lib.notify({ title='Prop Tool', description='Fehler beim Laden von attachments.json', type='error', duration=4000 })
+        cachedAttachments = {}
+    else
+        cachedAttachments = data
+        if uiOpen then
+            SendNUIMessage({ type='updatePresets', presets=cachedAttachments })
+        end
+    end
 end)
 
 CreateThread(function()
@@ -500,7 +503,10 @@ local function generateExport()
         lib.notify({ title='Prop Tool', description='Keine Eintraege.', type='error' })
         return
     end
-    local lines = { '-- d4rk_prop_tool export', '-- '..os.date('%Y-%m-%d %H:%M:%S'), '', 'local ATTACHMENTS = {' }
+    local d, mo, y  = GetClockDate()
+    local h, mi, s  = GetClockTime()
+    local timestamp = string.format('%04d-%02d-%02d %02d:%02d:%02d', y, mo, d, h, mi, s)
+    local lines = { '-- d4rk_prop_tool export', '-- '..timestamp, '', 'local ATTACHMENTS = {' }
     for name, e in pairs(data) do
         lines[#lines+1] = '    '..name..' = {'
         lines[#lines+1] = "        prop     = '"..e.prop.."',"
