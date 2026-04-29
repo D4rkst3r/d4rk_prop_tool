@@ -1,218 +1,132 @@
 {
-    "stolen_laptop": {
-        "animDict": "anim@arena@amb@seat_drone_tablet@female@",
-        "bone": "SKEL_R_Hand",
-        "rotation": {
-            "x": -29.5,
-            "z": -17.0,
-            "y": 224.5
-        },
-        "offset": {
-            "x": 0.227,
-            "z": -0.04499999999999,
-            "y": 0.183
-        },
-        "boneId": 57005,
-        "prop": "prop_laptop_01a",
-        "animClip": "base",
-        "notes": "stolen_laptop"
-    },
-    "stolen_lamp": {
-        "animDict": "anim@heists@box_carry@",
-        "bone": "IK_R_Hand",
-        "rotation": {
-            "x": -158.0,
-            "z": 0.0,
-            "y": 0.0
-        },
-        "offset": {
-            "x": 0.05999999999999,
-            "z": -0.015,
-            "y": 0.03
-        },
-        "boneId": 6286,
-        "prop": "v_res_j_tablelamp2",
-        "animClip": "idle",
-        "notes": "stolen_lamp"
-    },
     "chainsaw": {
-        "animDict": "weapons@first_person@aim_idle@remote_clone@heavy@minigun@",
-        "boneId": 28422,
-        "rotation": {
-            "x": -85.0,
-            "z": -11.5,
-            "y": 0.5
-        },
-        "offset": {
-            "x": 0.324,
-            "z": -0.01,
-            "y": -0.03
-        },
-        "bone": "SKEL_R_Hand",
         "prop": "d4rk_prop_chainsaw",
+        "bone": "PH_R_Hand",
+        "boneId": 28422,
+        "offset": { "x": 0.324, "y": -0.03, "z": -0.01 },
+        "rotation": { "x": -85.0, "y": 0.5, "z": -11.5 },
+        "animDict": "weapons@first_person@aim_idle@remote_clone@heavy@minigun@",
         "animClip": "settle_med",
         "notes": ""
     },
-    "stolen_kitchen_tools": {
-        "animDict": "missfam4",
-        "bone": "IK_L_Hand",
-        "rotation": {
-            "x": -144.0,
-            "z": -40.0,
-            "y": -1.0
-        },
-        "offset": {
-            "x": 0.01999999999999,
-            "z": 0.17,
-            "y": 0.04
-        },
-        "boneId": 36029,
-        "prop": "prop_knife_stand",
-        "animClip": "base",
-        "notes": "stolen_kitchen_tools"
-    },
-    "stolen_cups_mugs2": {
-        "animDict": "missfam4",
-        "bone": "IK_L_Hand",
-        "rotation": {
-            "x": -122.0,
-            "z": -18.0,
-            "y": -2.0
-        },
-        "offset": {
-            "x": 0.13999999999999,
-            "z": 0.13999999999999,
-            "y": -0.17
-        },
-        "boneId": 36029,
-        "prop": "v_res_r_teapot",
-        "animClip": "base",
-        "notes": "stolen_cups_mugs"
-    },
-    "stolen_tv": {
-        "animDict": "missfam4",
-        "bone": "IK_L_Hand",
-        "rotation": {
-            "x": -125.5,
-            "z": 7.5,
-            "y": -64.0
-        },
-        "offset": {
-            "x": -0.035,
-            "z": 0.092,
-            "y": -0.09899999999999
-        },
-        "boneId": 36029,
-        "prop": "prop_monitor_01a",
-        "animClip": "base",
-        "notes": "stolen_tv"
-    },
-    "stolen_clothing": {
-        "animDict": "switch@franklin@garbage",
-        "bone": "IK_R_Hand",
-        "rotation": {
-            "x": -118.0,
-            "z": 75.5,
-            "y": 20.0
-        },
-        "offset": {
-            "x": 0.335,
-            "z": 0.035,
-            "y": -0.034
-        },
-        "boneId": 6286,
-        "prop": "ba_prop_battle_bag_01b",
-        "animClip": "garbage_idle_plyr",
-        "notes": "stolen_clothing"
+    "stolen_kitchenware": {
+        "prop": "prop_pot_01",
+        "bone": "PH_L_Hand",
+        "boneId": 60309,
+        "offset": { "x": 0.16, "y": 0.08, "z": 0.02 },
+        "rotation": { "x": 0.0, "y": 0.0, "z": 0.0 },
+        "animDict": "anim@heists@box_carry@",
+        "animClip": "idle",
+        "notes": "holdHeavy - TODO: Offset anpassen"
     },
     "stolen_cups_mugs": {
-        "animDict": "missfam4",
-        "bone": "IK_L_Hand",
-        "rotation": {
-            "x": -136.0,
-            "z": -20.0,
-            "y": 0.0
-        },
-        "offset": {
-            "x": 0.16,
-            "z": 0.18,
-            "y": -0.16
-        },
-        "boneId": 36029,
         "prop": "v_res_r_teapot",
-        "animClip": "base",
-        "notes": "stolen_cups_mugs"
+        "bone": "PH_L_Hand",
+        "boneId": 60309,
+        "offset": { "x": 0.12, "y": 0.04, "z": -0.02 },
+        "rotation": { "x": 0.0, "y": 0.0, "z": 0.0 },
+        "animDict": "anim@heists@box_carry@",
+        "animClip": "idle",
+        "notes": "holdHeavy - TODO: Offset anpassen"
     },
-    "stolen_appliance": {
-        "animDict": "anim@arena@amb@seat_drone_tablet@female@",
-        "bone": "SKEL_R_Hand",
-        "rotation": {
-            "x": -87.5,
-            "z": -90.5,
-            "y": 64.0
-        },
-        "offset": {
-            "x": 0.165,
-            "z": 0.015,
-            "y": 0.03
-        },
-        "boneId": 57005,
-        "prop": "prop_toaster_02",
-        "animClip": "base",
-        "notes": "stolen_appliance"
+    "stolen_cookware": {
+        "prop": "prop_pot_01",
+        "bone": "PH_L_Hand",
+        "boneId": 60309,
+        "offset": { "x": 0.16, "y": 0.08, "z": 0.02 },
+        "rotation": { "x": 0.0, "y": 0.0, "z": 0.0 },
+        "animDict": "anim@heists@box_carry@",
+        "animClip": "idle",
+        "notes": "holdHeavy - identisch zu kitchenware, ggf. andere Rotation"
+    },
+    "stolen_kitchen_tools": {
+        "prop": "prop_knife_stand",
+        "bone": "PH_L_Hand",
+        "boneId": 60309,
+        "offset": { "x": 0.14, "y": 0.06, "z": -0.05 },
+        "rotation": { "x": 0.0, "y": 0.0, "z": 0.0 },
+        "animDict": "anim@heists@box_carry@",
+        "animClip": "idle",
+        "notes": "holdHeavy - TODO: Rotation pruefen"
+    },
+    "stolen_tv": {
+        "prop": "prop_monitor_01a",
+        "bone": "PH_L_Hand",
+        "boneId": 60309,
+        "offset": { "x": 0.16, "y": 0.06, "z": -0.02 },
+        "rotation": { "x": 0.0, "y": 0.0, "z": 0.0 },
+        "animDict": "anim@heists@box_carry@",
+        "animClip": "idle",
+        "notes": "holdHeavy - grosses Objekt, Offset ggf. anpassen"
+    },
+    "stolen_rug": {
+        "prop": "prop_rug_01",
+        "bone": "PH_L_Hand",
+        "boneId": 60309,
+        "offset": { "x": 0.10, "y": 0.04, "z": -0.05 },
+        "rotation": { "x": 90.0, "y": 0.0, "z": 0.0 },
+        "animDict": "anim@heists@box_carry@",
+        "animClip": "idle",
+        "notes": "holdHeavy - Rotation X=90 bereits gesetzt"
     },
     "stolen_audio": {
-        "animDict": "anim@heists@box_carry@",
-        "bone": "PH_L_Hand",
-        "rotation": {
-            "x": -6.5,
-            "z": -165.5,
-            "y": 10.5
-        },
-        "offset": {
-            "x": 0.071,
-            "z": 0.008,
-            "y": -0.002
-        },
-        "boneId": 60309,
         "prop": "ba_prop_battle_club_speaker_small",
+        "bone": "PH_L_Hand",
+        "boneId": 60309,
+        "offset": { "x": 0.16, "y": 0.06, "z": -0.05 },
+        "rotation": { "x": 0.0, "y": 0.0, "z": 0.0 },
+        "animDict": "anim@heists@box_carry@",
         "animClip": "idle",
-        "notes": "stolen_audio"
+        "notes": "holdHeavy - TODO: Rotation anpassen"
+    },
+    "stolen_laptop": {
+        "prop": "prop_laptop_01a",
+        "bone": "PH_L_Hand",
+        "boneId": 60309,
+        "offset": { "x": 0.14, "y": 0.05, "z": -0.04 },
+        "rotation": { "x": 0.0, "y": 0.0, "z": 0.0 },
+        "animDict": "anim@heists@box_carry@",
+        "animClip": "idle",
+        "notes": "holdHeavy - TODO: Anpassen"
+    },
+    "stolen_appliance": {
+        "prop": "prop_toaster_02",
+        "bone": "PH_L_Hand",
+        "boneId": 60309,
+        "offset": { "x": 0.18, "y": 0.10, "z": 0.02 },
+        "rotation": { "x": 0.0, "y": 0.0, "z": 0.0 },
+        "animDict": "anim@heists@box_carry@",
+        "animClip": "idle",
+        "notes": "holdHeavy - TODO: Anpassen"
+    },
+    "stolen_lamp": {
+        "prop": "prop_table_lamp_01",
+        "bone": "PH_L_Hand",
+        "boneId": 60309,
+        "offset": { "x": 0.10, "y": 0.04, "z": -0.30 },
+        "rotation": { "x": 0.0, "y": 0.0, "z": 0.0 },
+        "animDict": "anim@heists@box_carry@",
+        "animClip": "idle",
+        "notes": "holdHeavy - grosses Z-Offset wegen Lampenfuss"
+    },
+    "stolen_clothing": {
+        "prop": "prop_cs_heist_bag_01",
+        "bone": "PH_L_Hand",
+        "boneId": 60309,
+        "offset": { "x": 0.18, "y": 0.05, "z": -0.05 },
+        "rotation": { "x": 0.0, "y": 0.0, "z": 0.0 },
+        "animDict": "anim@mp_bag_var10_lrgchngbag@",
+        "animClip": "idle",
+        "notes": "carryBag - TODO: Anpassen"
     },
     "stolen_sports": {
-        "animDict": "switch@franklin@garbage",
-        "bone": "IK_R_Hand",
-        "rotation": {
-            "x": -102.0,
-            "z": 60.5,
-            "y": 22.0
-        },
-        "offset": {
-            "x": 0.23,
-            "z": -0.04999999999999,
-            "y": -0.04899999999999
-        },
-        "boneId": 6286,
         "prop": "prop_tennis_bag_01",
-        "animClip": "garbage_idle_plyr",
-        "notes": "stolen_sports"
-    },
-    "stolen_kitchenware": {
-        "animDict": "missfam4",
-        "bone": "IK_L_Hand",
-        "rotation": {
-            "x": -81.0,
-            "z": 44.5,
-            "y": 42.5
-        },
-        "offset": {
-            "x": 0.22399999999999,
-            "z": -0.11999999999999,
-            "y": 0.17
-        },
-        "boneId": 36029,
-        "prop": "prop_pot_01",
-        "animClip": "base",
-        "notes": "stolen_kitchenware"
+        "bone": "PH_L_Hand",
+        "boneId": 60309,
+        "offset": { "x": 0.14, "y": 0.04, "z": -0.10 },
+        "rotation": { "x": 0.0, "y": 0.0, "z": 0.0 },
+        "animDict": "anim@mp_bag_var10_lrgchngbag@",
+        "animClip": "idle",
+        "notes": "carryBag - TODO: Anpassen"
     }
 }
