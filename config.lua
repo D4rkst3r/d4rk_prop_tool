@@ -73,6 +73,16 @@ Config.Props = {
     'prop_cs_protest_sign',
     'prop_cs_paper_bag_01',
     'prop_notepad_01',
+    -- Stolen Items (aus Heist-Config)
+    'prop_pot_01',
+    'v_res_r_teapot',
+    'prop_knife_stand',
+    'prop_monitor_01a',
+    'prop_rug_01',
+    'prop_table_lamp_01',
+    'prop_cs_heist_bag_01',
+    'prop_tennis_bag_01',
+    'ba_prop_battle_club_speaker_small',
     -- Misc
     'prop_cs_bottle_cap',
     'prop_plas_bottle_01',
@@ -96,8 +106,10 @@ Config.Animations = {
     { label = 'Idle (Stand)',  dict = 'anim@amb@casino@bball@idle@male',      anim = 'idle_a',                    flags = 49 },
     { label = 'Look At Phone', dict = 'cellphone@',                           anim = 'cellphone_text_in',         flags = 49 },
     { label = 'Drink Bottle',  dict = 'mp_player_intdrink',                   anim = 'loop_bottle',               flags = 49 },
-    { label = 'Carry Box',     dict = 'anim@heists@box_carry@',               anim = 'idle',                      flags = 49 },
-    { label = 'Hold Clipboard',dict = 'missfbi3_carmeet',                     anim = 'carmeet_idlea_worker',      flags = 49 },
+    { label = 'Carry Box',      dict = 'anim@heists@box_carry@',                  anim = 'idle',                      flags = 49 },
+    { label = 'Hold Clipboard', dict = 'missfbi3_carmeet',                        anim = 'carmeet_idlea_worker',      flags = 49 },
+    { label = 'Hold Light',     dict = 'anim@heists@ornate_bank@grab_cash',        anim = 'idle',                      flags = 49 },
+    { label = 'Carry Bag',      dict = 'anim@mp_bag_var10_lrgchngbag@',            anim = 'idle',                      flags = 49 },
 }
 
 Config.Bones = {

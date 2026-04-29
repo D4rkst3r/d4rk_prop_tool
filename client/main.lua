@@ -4,7 +4,6 @@
     Abhaengigkeiten: ox_lib, config.lua
 --]]
 
-local dataview = require 'client.dataview'
 
 -- ─────────────────────────────────────────────
 --  State
@@ -29,17 +28,6 @@ local rotateSpeed = Config.DefaultRotateSpeed or 1.0
 
 local cam     = nil
 local camData = { dist=2.5, angle=0.0, height=0.5, focus='ped' }
-
-local gizmoActive    = false
-local gizmoEnabled   = false
-local gizmoMode      = 'Translate'
-local gizmoRelative  = false
-local gizmoCursor    = false
-local gizmoCancelled = false
-
-local WHEEL_STEP = 0.05
-local MIN_SCALE  = 0.05
-local MAX_SCALE  = 50.0
 
 local cachedAttachments = {}
 
@@ -149,7 +137,6 @@ clearHistory = function(slot)
     historyIdx[slot] = 0
 end
 
-
 -- ─────────────────────────────────────────────
 --  Camera
 -- ─────────────────────────────────────────────
@@ -215,227 +202,6 @@ CreateThread(function()
     end
 end)
 
--- ─────────────────────────────────────────────
---  Gizmo
--- ─────────────────────────────────────────────
-
-local function _vecLen(x, y, z)  return math.sqrt(x*x + y*y + z*z) end
-local function _normalize(x, y, z)
-    local l = _vecLen(x, y, z)
-    if l == 0 then return 0, 0, 0 end
-    return x/l, y/l, z/l
-end
-local function _clamp(v, a, b) if v < a then return a end if v > b then return b end return v end
-
-local function _uniformScale(e)
-    local f, r, u = GetEntityMatrix(e)
-    local s = (_vecLen(r[1],r[2],r[3]) + _vecLen(f[1],f[2],f[3]) + _vecLen(u[1],u[2],u[3])) / 3.0
-    return s > 0.0 and s or 1.0
-end
-
-local function _makeMatrix(e)
-    local f, r, u, a = GetEntityMatrix(e)
-    local v = dataview.ArrayBuffer(64)
-    v:SetFloat32(0,  r[1]):SetFloat32(4,  r[2]):SetFloat32(8,  r[3]):SetFloat32(12, 0)
-     :SetFloat32(16, f[1]):SetFloat32(20, f[2]):SetFloat32(24, f[3]):SetFloat32(28, 0)
-     :SetFloat32(32, u[1]):SetFloat32(36, u[2]):SetFloat32(40, u[3]):SetFloat32(44, 0)
-     :SetFloat32(48, a[1]):SetFloat32(52, a[2]):SetFloat32(56, a[3]):SetFloat32(60, 1)
-    return v
-end
-
-local function _applyMatrix(e, v)
-    local x1,y1,z1 = _normalize(v:GetFloat32(16), v:GetFloat32(20), v:GetFloat32(24))
-    local x2,y2,z2 = _normalize(v:GetFloat32(0),  v:GetFloat32(4),  v:GetFloat32(8))
-    local x3,y3,z3 = _normalize(v:GetFloat32(32), v:GetFloat32(36), v:GetFloat32(40))
-    SetEntityMatrix(e, x1,y1,z1, x2,y2,z2, x3,y3,z3, v:GetFloat32(48), v:GetFloat32(52), v:GetFloat32(56))
-end
-
-local function _applyScale(v, s)
-    local fnx,fny,fnz = _normalize(v:GetFloat32(16), v:GetFloat32(20), v:GetFloat32(24))
-    local rnx,rny,rnz = _normalize(v:GetFloat32(0),  v:GetFloat32(4),  v:GetFloat32(8))
-    local unx,uny,unz = _normalize(v:GetFloat32(32), v:GetFloat32(36), v:GetFloat32(40))
-    v:SetFloat32(16, fnx*s):SetFloat32(20, fny*s):SetFloat32(24, fnz*s)
-     :SetFloat32(0,  rnx*s):SetFloat32(4,  rny*s):SetFloat32(8,  rnz*s)
-     :SetFloat32(32, unx*s):SetFloat32(36, uny*s):SetFloat32(40, unz*s)
-end
-
-local function computeFromWorld(slot)
-    local p = props[slot]
-    local ped = PlayerPedId()
-    local bonePos = GetWorldPositionOfEntityBone(ped, GetPedBoneIndex(ped, p.boneId))
-    local propPos = GetEntityCoords(p.entity)
-    local propRot = GetEntityRotation(p.entity, 2)
-    local dx = propPos.x - bonePos.x
-    local dy = propPos.y - bonePos.y
-    local dz = propPos.z - bonePos.z
-    local pf, pr, pu = GetEntityMatrix(ped)
-    p.offset.x = dx*pr[1] + dy*pr[2] + dz*pr[3]
-    p.offset.y = dx*pf[1] + dy*pf[2] + dz*pf[3]
-    p.offset.z = dx*pu[1] + dy*pu[2] + dz*pu[3]
-    local pedRot = GetEntityRotation(ped, 2)
-    p.rotation.x = propRot.x
-    p.rotation.y = propRot.y
-    p.rotation.z = propRot.z - pedRot.z
-end
-
-local function gizmoTextUILoop(entity)
-    CreateThread(function()
-        while gizmoEnabled do
-            Wait(100)
-            local pos = GetEntityCoords(entity)
-            local rot = GetEntityRotation(entity, 2)
-            lib.showTextUI(
-                string.format(
-                    'Gizmo - %s | %s\n'
-                    .. 'Pos  %.2f  %.2f  %.2f\n'
-                    .. 'Rot  %.1f  %.1f  %.1f  Scale: %.2f\n'
-                    .. 'W=Move  R=Rotate  S=Scale  Q=Lokal\n'
-                    .. 'LALT=Snap  ENTER=OK  ESC=Abbruch',
-                    gizmoMode, gizmoRelative and 'Lokal' or 'Welt',
-                    pos.x, pos.y, pos.z,
-                    rot.x, rot.y, rot.z, _uniformScale(entity)
-                ),
-                { position = 'top-left', icon = 'arrow-pointer' }
-            )
-        end
-        lib.hideTextUI()
-    end)
-end
-
-local function runGizmoLoop(entity)
-    gizmoCursor = true
-    EnterCursorMode()
-    SetEntityDrawOutline(entity, true)
-
-    while gizmoEnabled and DoesEntityExist(entity) do
-        Wait(0)
-
-        if IsControlJustPressed(0, 47) then
-            if gizmoCursor then LeaveCursorMode() gizmoCursor = false
-            else EnterCursorMode() gizmoCursor = true end
-        end
-
-        DisableControlAction(0, 24,  true)
-        DisableControlAction(0, 25,  true)
-        DisableControlAction(0, 140, true)
-        DisablePlayerFiring(cache.playerId, true)
-        DisableControlAction(0, 200, true)
-        DisableControlAction(0, 199, true)
-        DisableControlAction(0, 202, true)
-
-        if IsDisabledControlJustPressed(0, 200) or IsDisabledControlJustPressed(0, 202) then
-            gizmoCancelled = true
-            gizmoEnabled   = false
-            PlaySoundFrontend(-1, 'CANCEL', 'HUD_FRONTEND_DEFAULT_SOUNDSET', true)
-            break
-        end
-
-        local mat = _makeMatrix(entity)
-
-        if gizmoMode == 'Scale' then
-            DisableControlAction(0, 14, true)
-            DisableControlAction(0, 15, true)
-            local up   = IsDisabledControlJustPressed(0, 15)
-            local down = IsDisabledControlJustPressed(0, 14)
-            if up or down then
-                local t = _clamp(_uniformScale(entity) * (1.0 + (up and WHEEL_STEP or -WHEEL_STEP)), MIN_SCALE, MAX_SCALE)
-                _applyScale(mat, t)
-                _applyMatrix(entity, mat)
-            end
-        end
-
-        if gizmoMode == 'Rotate' and IsControlPressed(0, 21) then
-            local rot = GetEntityRotation(entity, 2)
-            rot.z = math.floor((rot.z + 22.5) / 45) * 45
-            SetEntityRotation(entity, rot.x, rot.y, rot.z, 2, true)
-        end
-
-        local changed = Citizen.InvokeNative(0xEB2EDCA2, mat:Buffer(), 'PropTool_Gizmo', Citizen.ReturnResultAnyway())
-        if changed then
-            if gizmoMode == 'Scale' then
-                local ns = _clamp(math.max(
-                    _vecLen(mat:GetFloat32(0),  mat:GetFloat32(4),  mat:GetFloat32(8)),
-                    _vecLen(mat:GetFloat32(16), mat:GetFloat32(20), mat:GetFloat32(24)),
-                    _vecLen(mat:GetFloat32(32), mat:GetFloat32(36), mat:GetFloat32(40))
-                ), MIN_SCALE, MAX_SCALE)
-                _applyScale(mat, ns)
-            end
-            _applyMatrix(entity, mat)
-        end
-    end
-
-    if gizmoCursor then LeaveCursorMode() end
-    gizmoCursor = false
-    SetEntityDrawOutline(entity, false)
-    gizmoEnabled = false
-end
-
-local function startGizmo(slot)
-    local p = props[slot]
-    if not p.entity or not DoesEntityExist(p.entity) then
-        lib.notify({ title='Prop Tool', description='Kein Prop in Slot '..slot, type='error' })
-        return
-    end
-    if gizmoActive then return end
-
-    CreateThread(function()
-        SetNuiFocus(false, false)
-        SendNUIMessage({ type='hideUI' })
-        stopCamera()
-        uiOpen = false
-
-        gizmoActive    = true
-        gizmoEnabled   = true
-        gizmoCancelled = false
-        gizmoMode      = 'Translate'
-
-        local savedOff = { x=p.offset.x,   y=p.offset.y,   z=p.offset.z }
-        local savedRot = { x=p.rotation.x, y=p.rotation.y, z=p.rotation.z }
-
-        DetachEntity(p.entity, true, true)
-        FreezeEntityPosition(p.entity, true)
-
-        gizmoTextUILoop(p.entity)
-        runGizmoLoop(p.entity)
-
-        FreezeEntityPosition(p.entity, false)
-        gizmoActive = false
-
-        if gizmoCancelled then
-            p.offset   = savedOff
-            p.rotation = savedRot
-            lib.notify({ title='Prop Tool', description='Gizmo abgebrochen.', type='error' })
-        else
-            pushHistory(slot)
-            computeFromWorld(slot)
-            pushHistory(slot)
-            lib.notify({ title='Prop Tool', description='Gizmo fertig.', type='success' })
-        end
-
-        attachProp(slot)
-        openUI()
-    end)
-end
-
-lib.addKeybind({ name='_ptool_gizmoSelect',    description='Prop Tool Gizmo - Auswahl',    defaultMapper='MOUSE_BUTTON', defaultKey='MOUSE_LEFT',
-    onPressed=function() if gizmoEnabled then ExecuteCommand('+gizmoSelect') end end,
-    onReleased=function() ExecuteCommand('-gizmoSelect') end })
-lib.addKeybind({ name='_ptool_gizmoTranslate', description='Prop Tool Gizmo - Move',        defaultKey='W',
-    onPressed=function() if gizmoEnabled then gizmoMode='Translate' ExecuteCommand('+gizmoTranslation') end end,
-    onReleased=function() ExecuteCommand('-gizmoTranslation') end })
-lib.addKeybind({ name='_ptool_gizmoRotate',    description='Prop Tool Gizmo - Rotate',      defaultKey='R',
-    onPressed=function() if gizmoEnabled then gizmoMode='Rotate' ExecuteCommand('+gizmoRotation') end end,
-    onReleased=function() ExecuteCommand('-gizmoRotation') end })
-lib.addKeybind({ name='_ptool_gizmoScale',     description='Prop Tool Gizmo - Scale',       defaultKey='S',
-    onPressed=function() if gizmoEnabled then gizmoMode='Scale' ExecuteCommand('+gizmoScale') end end,
-    onReleased=function() ExecuteCommand('-gizmoScale') end })
-lib.addKeybind({ name='_ptool_gizmoLocal',     description='Prop Tool Gizmo - Lokal/Welt',  defaultKey='Q',
-    onPressed=function() if gizmoEnabled then gizmoRelative=not gizmoRelative ExecuteCommand('+gizmoLocal') end end,
-    onReleased=function() ExecuteCommand('-gizmoLocal') end })
-lib.addKeybind({ name='ptool_gizmoSnap',       description='Prop Tool Gizmo - Snap Ground', defaultKey='LMENU',
-    onPressed=function() if gizmoEnabled then PlaceObjectOnGroundProperly_2(props[1].entity) end end })
-lib.addKeybind({ name='ptool_gizmoConfirm',    description='Prop Tool Gizmo - Bestaetigen', defaultKey='RETURN',
-    onReleased=function() if gizmoEnabled then gizmoEnabled=false end end })
 
 -- ─────────────────────────────────────────────
 --  Data / Persistence
@@ -504,7 +270,10 @@ local function generateExport()
         lib.notify({ title='Prop Tool', description='Keine Eintraege.', type='error' })
         return
     end
-    local lines = { '-- d4rk_prop_tool export', '-- '..os.date('%Y-%m-%d %H:%M:%S'), '', 'local ATTACHMENTS = {' }
+    local d, mo, y  = GetClockDate()
+    local h, mi, s  = GetClockTime()
+    local timestamp = string.format('%04d-%02d-%02d %02d:%02d:%02d', y, mo, d, h, mi, s)
+    local lines = { '-- d4rk_prop_tool export', '-- '..timestamp, '', 'local ATTACHMENTS = {' }
     for name, e in pairs(data) do
         lines[#lines+1] = '    '..name..' = {'
         lines[#lines+1] = "        prop     = '"..e.prop.."',"
@@ -665,8 +434,6 @@ RegisterNUICallback('updateCameraFocus', function(data, cb)
     cb({})
 end)
 
-RegisterNUICallback('startGizmo', function(data, cb) startGizmo(data.slot) cb({}) end)
-
 RegisterNUICallback('resetProp', function(data, cb)
     local slot = data.slot
     pushHistory(slot)
@@ -822,7 +589,7 @@ for name, axis in pairs(AXES) do
     lib.addKeybind({
         name='ptool_num_'..name, description='Prop Tool Num - '..name, defaultKey=axis.key,
         onPressed=function()
-            if uiOpen or gizmoActive then return end
+            if uiOpen then return end
             if not (props[1].entity and DoesEntityExist(props[1].entity)) then return end
             holdState[name].pressed=true; holdState[name].holdTime=0
         end,
@@ -832,14 +599,14 @@ end
 
 lib.addKeybind({ name='ptool_step_up', description='Prop Tool - Schritt +', defaultKey='ADD',
     onPressed=function()
-        if uiOpen or gizmoActive then return end
+        if uiOpen then return end
         stepIndex = math.min(#STEP_LEVELS, stepIndex+1)
         moveSpeed = STEP_LEVELS[stepIndex]
         lib.notify({ title='Prop Tool', description=string.format('Schritt: %.3f', moveSpeed), type='inform', duration=1200, position='top-right' })
     end })
 lib.addKeybind({ name='ptool_step_down', description='Prop Tool - Schritt -', defaultKey='SUBTRACT',
     onPressed=function()
-        if uiOpen or gizmoActive then return end
+        if uiOpen then return end
         stepIndex = math.max(1, stepIndex-1)
         moveSpeed = STEP_LEVELS[stepIndex]
         lib.notify({ title='Prop Tool', description=string.format('Schritt: %.3f', moveSpeed), type='inform', duration=1200, position='top-right' })
@@ -848,7 +615,7 @@ lib.addKeybind({ name='ptool_step_down', description='Prop Tool - Schritt -', de
 local lastFrame = GetGameTimer()
 CreateThread(function()
     while true do
-        if uiOpen or gizmoActive then
+        if uiOpen then
             Wait(100); lastFrame = GetGameTimer()
         else
             Wait(0)
@@ -900,7 +667,6 @@ end, false)
 
 AddEventHandler('onResourceStop', function(res)
     if res ~= GetCurrentResourceName() then return end
-    gizmoEnabled = false
     stopAnim()
     deleteProp(1); deleteProp(2)
     stopCamera()
