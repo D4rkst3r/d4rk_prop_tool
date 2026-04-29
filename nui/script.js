@@ -471,13 +471,7 @@ document.querySelectorAll('.moveBtn, .rotBtn').forEach((btn) => {
     );
 });
 
-// ─── Gizmo / Reset / Copy ──────────────────────────────────────
-document.querySelectorAll('.gizmoBtn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-        send('startGizmo', { slot: parseInt(btn.dataset.slot) });
-    });
-});
-
+// ─── Reset / Copy ──────────────────────────────────────────────
 document.querySelectorAll('.resetBtn').forEach((btn) => {
     btn.addEventListener('click', () => {
         send('resetProp', { slot: parseInt(btn.dataset.slot) });
