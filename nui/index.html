@@ -11,13 +11,13 @@
 
     <!-- Header -->
     <div class="panel-header">
-        <span class="panel-title">&#128295; d4rk Prop Tool</span>
-        <button id="btnClose" class="btn-icon" title="Schliessen">&#x2715;</button>
+        <span class="panel-title">&#128295; <span data-i18n="ui_title">d4rk Prop Tool</span></span>
+        <button id="btnClose" class="btn-icon" data-i18n-title="ui_close" title="Schliessen">&#x2715;</button>
     </div>
 
     <!-- Animations -->
     <div class="section">
-        <div class="section-title">Animationen</div>
+        <div class="section-title" data-i18n="ui_animations">Animationen</div>
         <div class="row">
             <button id="animPrev" class="btn-nav">&#8249;</button>
             <select id="animSelect" class="select flex1"></select>
@@ -25,16 +25,16 @@
         </div>
         <div class="row mt4">
             <div class="col">
-                <label>Custom Dict</label>
+                <label data-i18n="ui_custom_dict">Custom Dict</label>
                 <input id="customDict" class="input" placeholder="anim@dict@...">
             </div>
             <div class="col ml4">
-                <label>Custom Anim</label>
+                <label data-i18n="ui_custom_anim">Custom Anim</label>
                 <input id="customAnim" class="input" placeholder="clip_name">
             </div>
         </div>
         <div class="row mt4" style="align-items:center; gap:6px;">
-            <label style="min-width:44px;">Flags:</label>
+            <label style="min-width:44px;" data-i18n="ui_flags">Flags:</label>
             <input type="number" id="animFlags" class="input" value="49" style="width:60px;">
             <div class="flag-presets">
                 <button class="btn-flag" data-val="1">1</button>
@@ -46,21 +46,21 @@
             </div>
         </div>
         <div class="row mt4">
-            <button id="btnPlayAnim" class="btn btn-green flex1">&#9654; Play</button>
-            <button id="btnStopAnim" class="btn btn-red flex1 ml4">&#9632; Stop</button>
+            <button id="btnPlayAnim" class="btn btn-green flex1">&#9654; <span data-i18n="ui_play">Play</span></button>
+            <button id="btnStopAnim" class="btn btn-red flex1 ml4">&#9632; <span data-i18n="ui_stop">Stop</span></button>
         </div>
     </div>
 
     <!-- Speed Controls -->
     <div class="section">
-        <div class="section-title">Geschwindigkeit</div>
+        <div class="section-title" data-i18n="ui_speed">Geschwindigkeit</div>
         <div class="speed-row">
-            <label>Move: <span id="moveVal">0.01</span></label>
+            <label><span data-i18n="ui_move">Move</span>: <span id="moveVal">0.01</span></label>
             <input type="range" id="moveSlider" min="0.001" max="0.5" step="0.001" value="0.01">
             <div id="movePresets" class="presets"></div>
         </div>
         <div class="speed-row mt4">
-            <label>Rotate: <span id="rotVal">1.0</span></label>
+            <label><span data-i18n="ui_rotate">Rotate</span>: <span id="rotVal">1.0</span></label>
             <input type="range" id="rotSlider" min="0.1" max="45.0" step="0.1" value="1.0">
             <div id="rotPresets" class="presets"></div>
         </div>
@@ -68,17 +68,17 @@
 
     <!-- Camera -->
     <div class="section">
-        <div class="section-title">Kamera</div>
+        <div class="section-title" data-i18n="ui_camera">Kamera</div>
         <div class="row mb4">
-            <label class="mr8">Fokus:</label>
+            <label class="mr8" data-i18n="ui_focus">Fokus:</label>
             <select id="camFocus" class="select flex1">
-                <option value="ped">Spieler</option>
-                <option value="prop1">Prop 1</option>
-                <option value="prop2">Prop 2</option>
+                <option value="ped"   data-i18n="ui_focus_ped">Spieler</option>
+                <option value="prop1" data-i18n="ui_focus_prop1">Prop 1</option>
+                <option value="prop2" data-i18n="ui_focus_prop2">Prop 2</option>
             </select>
         </div>
         <div class="cam-row">
-            <label>Distanz: <span id="distVal">2.5</span></label>
+            <label><span data-i18n="ui_distance">Distanz</span>: <span id="distVal">2.5</span></label>
             <div class="row">
                 <button class="btn-nudge" data-axis="dist" data-amt="-0.2">-</button>
                 <input type="range" id="camDist" min="0.5" max="12.0" step="0.1" value="2.5" class="flex1">
@@ -86,7 +86,7 @@
             </div>
         </div>
         <div class="cam-row mt4">
-            <label>Winkel: <span id="angleVal">0</span>&#176;</label>
+            <label><span data-i18n="ui_angle">Winkel</span>: <span id="angleVal">0</span>&#176;</label>
             <div class="row">
                 <button class="btn-nudge" data-axis="angle" data-amt="-5">-</button>
                 <input type="range" id="camAngle" min="0" max="359" step="1" value="0" class="flex1">
@@ -94,7 +94,7 @@
             </div>
         </div>
         <div class="cam-row mt4">
-            <label>Hoehe: <span id="heightVal">0.5</span></label>
+            <label><span data-i18n="ui_height">Hoehe</span>: <span id="heightVal">0.5</span></label>
             <div class="row">
                 <button class="btn-nudge" data-axis="height" data-amt="-0.1">-</button>
                 <input type="range" id="camHeight" min="-2.0" max="5.0" step="0.1" value="0.5" class="flex1">
@@ -108,28 +108,28 @@
         <div class="prop-header">Prop 1</div>
 
         <div class="section">
-            <input id="propSearch1" class="input mb4" placeholder="&#128269; Prop suchen...">
+            <input id="propSearch1" class="input mb4" data-i18n-ph="ui_search_ph" placeholder="Prop suchen...">
             <div class="row">
                 <button id="p1Prev" class="btn-nav">&#8249;</button>
                 <select id="propSelect1" class="select flex1"></select>
                 <button id="p1Next" class="btn-nav">&#8250;</button>
             </div>
-            <input id="customProp1" class="input mt4" placeholder="Eigenes Modell: prop_ld_jerrycan_01">
+            <input id="customProp1" class="input mt4" data-i18n-ph="ui_custom_model_ph" placeholder="Eigenes Modell: prop_ld_jerrycan_01">
             <div class="row mt4">
-                <button class="btn btn-green flex1 spawnBtn" data-slot="1">Spawn</button>
-                <button class="btn btn-red flex1 ml4 deleteBtn" data-slot="1">Delete</button>
+                <button class="btn btn-green flex1 spawnBtn" data-slot="1" data-i18n="ui_spawn">Spawn</button>
+                <button class="btn btn-red flex1 ml4 deleteBtn" data-slot="1" data-i18n="ui_delete">Delete</button>
             </div>
         </div>
 
         <div class="section">
-            <label>Knochen:</label>
+            <label data-i18n="ui_bone">Knochen:</label>
             <select id="boneSelect1" class="select"></select>
-            <label class="mt4">Custom Bone ID:</label>
-            <input type="number" id="customBone1" class="input" placeholder="z.B. 28422">
-            <label class="mt4">Rotation Order:</label>
+            <label class="mt4" data-i18n="ui_custom_bone">Custom Bone ID:</label>
+            <input type="number" id="customBone1" class="input" placeholder="28422">
+            <label class="mt4" data-i18n="ui_rot_order">Rotation Order:</label>
             <select id="rotOrder1" class="select">
                 <option value="0">0</option>
-                <option value="1" selected>1 (Standard)</option>
+                <option value="1" selected data-i18n="ui_rot_order_default">1 (Standard)</option>
                 <option value="2">2</option>
                 <option value="3">3</option>
                 <option value="4">4</option>
@@ -140,23 +140,23 @@
         <div class="section">
             <div class="ctrl-grid">
                 <div class="ctrl-group">
-                    <div class="ctrl-title">Position</div>
+                    <div class="ctrl-title" data-i18n="ui_position">Position</div>
                     <div class="ctrl-btns">
-                        <button class="btn-ctrl moveBtn" data-slot="1" data-dir="forward">Vor</button>
-                        <button class="btn-ctrl moveBtn" data-slot="1" data-dir="back">Zur</button>
-                        <button class="btn-ctrl moveBtn" data-slot="1" data-dir="left">Li</button>
-                        <button class="btn-ctrl moveBtn" data-slot="1" data-dir="right">Re</button>
-                        <button class="btn-ctrl moveBtn" data-slot="1" data-dir="up">Hoch</button>
-                        <button class="btn-ctrl moveBtn" data-slot="1" data-dir="down">Run</button>
+                        <button class="btn-ctrl moveBtn" data-slot="1" data-dir="forward" data-i18n="ui_fwd">Vor</button>
+                        <button class="btn-ctrl moveBtn" data-slot="1" data-dir="back"    data-i18n="ui_back">Zur</button>
+                        <button class="btn-ctrl moveBtn" data-slot="1" data-dir="left"    data-i18n="ui_left">Li</button>
+                        <button class="btn-ctrl moveBtn" data-slot="1" data-dir="right"   data-i18n="ui_right">Re</button>
+                        <button class="btn-ctrl moveBtn" data-slot="1" data-dir="up"      data-i18n="ui_up">Hoch</button>
+                        <button class="btn-ctrl moveBtn" data-slot="1" data-dir="down"    data-i18n="ui_down">Run</button>
                     </div>
                 </div>
                 <div class="ctrl-group">
-                    <div class="ctrl-title">Rotation</div>
+                    <div class="ctrl-title" data-i18n="ui_rotation">Rotation</div>
                     <div class="ctrl-btns">
-                        <button class="btn-ctrl rotBtn" data-slot="1" data-dir="rotLeft">Li</button>
-                        <button class="btn-ctrl rotBtn" data-slot="1" data-dir="rotRight">Re</button>
-                        <button class="btn-ctrl rotBtn" data-slot="1" data-dir="rotUp">Ho</button>
-                        <button class="btn-ctrl rotBtn" data-slot="1" data-dir="rotDown">Un</button>
+                        <button class="btn-ctrl rotBtn" data-slot="1" data-dir="rotLeft"  data-i18n="ui_left">Li</button>
+                        <button class="btn-ctrl rotBtn" data-slot="1" data-dir="rotRight" data-i18n="ui_right">Re</button>
+                        <button class="btn-ctrl rotBtn" data-slot="1" data-dir="rotUp"    data-i18n="ui_rot_up">Ho</button>
+                        <button class="btn-ctrl rotBtn" data-slot="1" data-dir="rotDown"  data-i18n="ui_rot_down">Un</button>
                         <button class="btn-ctrl rotBtn" data-slot="1" data-dir="rotCW">CW</button>
                         <button class="btn-ctrl rotBtn" data-slot="1" data-dir="rotCCW">CCW</button>
                     </div>
@@ -172,20 +172,20 @@
 
         <div class="section">
             <div class="row">
-                <button class="btn btn-grey flex1 resetBtn" data-slot="1">Reset</button>
+                <button class="btn btn-grey flex1 resetBtn" data-slot="1" data-i18n="ui_reset">Reset</button>
             </div>
             <div class="row mt4">
-                <button class="btn btn-undo flex1 undoBtn" data-slot="1">&#8630; Undo</button>
-                <button class="btn btn-undo flex1 ml4 redoBtn" data-slot="1">&#8631; Redo</button>
+                <button class="btn btn-undo flex1 undoBtn" data-slot="1">&#8630; <span data-i18n="ui_undo">Undo</span></button>
+                <button class="btn btn-undo flex1 ml4 redoBtn" data-slot="1">&#8631; <span data-i18n="ui_redo">Redo</span></button>
             </div>
             <div class="row mt4">
-                <button class="btn btn-purple flex1 copyBtn" data-slot="1">&#128203; Copy</button>
+                <button class="btn btn-purple flex1 copyBtn" data-slot="1">&#128203; <span data-i18n="ui_copy">Copy</span></button>
                 <select class="select ml4 formatSelect" id="fmt1" style="width:90px;">
                     <option value="default">Default</option>
                     <option value="ox">OX</option>
                     <option value="emotes">Emotes</option>
                 </select>
-                <button class="btn btn-grey ml4 quickCopyBtn" data-slot="1" title="Aktuelle Werte kopieren" style="min-width:36px;">&#9889;</button>
+                <button class="btn btn-grey ml4 quickCopyBtn" data-slot="1" data-i18n-title="ui_quickcopy_title" title="Aktuelle Werte kopieren" style="min-width:36px;">&#9889;</button>
             </div>
         </div>
     </div>
@@ -195,28 +195,28 @@
         <div class="prop-header">Prop 2</div>
 
         <div class="section">
-            <input id="propSearch2" class="input mb4" placeholder="&#128269; Prop suchen...">
+            <input id="propSearch2" class="input mb4" data-i18n-ph="ui_search_ph" placeholder="Prop suchen...">
             <div class="row">
                 <button id="p2Prev" class="btn-nav">&#8249;</button>
                 <select id="propSelect2" class="select flex1"></select>
                 <button id="p2Next" class="btn-nav">&#8250;</button>
             </div>
-            <input id="customProp2" class="input mt4" placeholder="Eigenes Modell: prop_ld_jerrycan_01">
+            <input id="customProp2" class="input mt4" data-i18n-ph="ui_custom_model_ph" placeholder="Eigenes Modell: prop_ld_jerrycan_01">
             <div class="row mt4">
-                <button class="btn btn-green flex1 spawnBtn" data-slot="2">Spawn</button>
-                <button class="btn btn-red flex1 ml4 deleteBtn" data-slot="2">Delete</button>
+                <button class="btn btn-green flex1 spawnBtn" data-slot="2" data-i18n="ui_spawn">Spawn</button>
+                <button class="btn btn-red flex1 ml4 deleteBtn" data-slot="2" data-i18n="ui_delete">Delete</button>
             </div>
         </div>
 
         <div class="section">
-            <label>Knochen:</label>
+            <label data-i18n="ui_bone">Knochen:</label>
             <select id="boneSelect2" class="select"></select>
-            <label class="mt4">Custom Bone ID:</label>
-            <input type="number" id="customBone2" class="input" placeholder="z.B. 57005">
-            <label class="mt4">Rotation Order:</label>
+            <label class="mt4" data-i18n="ui_custom_bone">Custom Bone ID:</label>
+            <input type="number" id="customBone2" class="input" placeholder="60309">
+            <label class="mt4" data-i18n="ui_rot_order">Rotation Order:</label>
             <select id="rotOrder2" class="select">
                 <option value="0">0</option>
-                <option value="1" selected>1 (Standard)</option>
+                <option value="1" selected data-i18n="ui_rot_order_default">1 (Standard)</option>
                 <option value="2">2</option>
                 <option value="3">3</option>
                 <option value="4">4</option>
@@ -227,23 +227,23 @@
         <div class="section">
             <div class="ctrl-grid">
                 <div class="ctrl-group">
-                    <div class="ctrl-title">Position</div>
+                    <div class="ctrl-title" data-i18n="ui_position">Position</div>
                     <div class="ctrl-btns">
-                        <button class="btn-ctrl moveBtn" data-slot="2" data-dir="forward">Vor</button>
-                        <button class="btn-ctrl moveBtn" data-slot="2" data-dir="back">Zur</button>
-                        <button class="btn-ctrl moveBtn" data-slot="2" data-dir="left">Li</button>
-                        <button class="btn-ctrl moveBtn" data-slot="2" data-dir="right">Re</button>
-                        <button class="btn-ctrl moveBtn" data-slot="2" data-dir="up">Hoch</button>
-                        <button class="btn-ctrl moveBtn" data-slot="2" data-dir="down">Run</button>
+                        <button class="btn-ctrl moveBtn" data-slot="2" data-dir="forward" data-i18n="ui_fwd">Vor</button>
+                        <button class="btn-ctrl moveBtn" data-slot="2" data-dir="back"    data-i18n="ui_back">Zur</button>
+                        <button class="btn-ctrl moveBtn" data-slot="2" data-dir="left"    data-i18n="ui_left">Li</button>
+                        <button class="btn-ctrl moveBtn" data-slot="2" data-dir="right"   data-i18n="ui_right">Re</button>
+                        <button class="btn-ctrl moveBtn" data-slot="2" data-dir="up"      data-i18n="ui_up">Hoch</button>
+                        <button class="btn-ctrl moveBtn" data-slot="2" data-dir="down"    data-i18n="ui_down">Run</button>
                     </div>
                 </div>
                 <div class="ctrl-group">
-                    <div class="ctrl-title">Rotation</div>
+                    <div class="ctrl-title" data-i18n="ui_rotation">Rotation</div>
                     <div class="ctrl-btns">
-                        <button class="btn-ctrl rotBtn" data-slot="2" data-dir="rotLeft">Li</button>
-                        <button class="btn-ctrl rotBtn" data-slot="2" data-dir="rotRight">Re</button>
-                        <button class="btn-ctrl rotBtn" data-slot="2" data-dir="rotUp">Ho</button>
-                        <button class="btn-ctrl rotBtn" data-slot="2" data-dir="rotDown">Un</button>
+                        <button class="btn-ctrl rotBtn" data-slot="2" data-dir="rotLeft"  data-i18n="ui_left">Li</button>
+                        <button class="btn-ctrl rotBtn" data-slot="2" data-dir="rotRight" data-i18n="ui_right">Re</button>
+                        <button class="btn-ctrl rotBtn" data-slot="2" data-dir="rotUp"    data-i18n="ui_rot_up">Ho</button>
+                        <button class="btn-ctrl rotBtn" data-slot="2" data-dir="rotDown"  data-i18n="ui_rot_down">Un</button>
                         <button class="btn-ctrl rotBtn" data-slot="2" data-dir="rotCW">CW</button>
                         <button class="btn-ctrl rotBtn" data-slot="2" data-dir="rotCCW">CCW</button>
                     </div>
@@ -259,20 +259,20 @@
 
         <div class="section">
             <div class="row">
-                <button class="btn btn-grey flex1 resetBtn" data-slot="2">Reset</button>
+                <button class="btn btn-grey flex1 resetBtn" data-slot="2" data-i18n="ui_reset">Reset</button>
             </div>
             <div class="row mt4">
-                <button class="btn btn-undo flex1 undoBtn" data-slot="2">&#8630; Undo</button>
-                <button class="btn btn-undo flex1 ml4 redoBtn" data-slot="2">&#8631; Redo</button>
+                <button class="btn btn-undo flex1 undoBtn" data-slot="2">&#8630; <span data-i18n="ui_undo">Undo</span></button>
+                <button class="btn btn-undo flex1 ml4 redoBtn" data-slot="2">&#8631; <span data-i18n="ui_redo">Redo</span></button>
             </div>
             <div class="row mt4">
-                <button class="btn btn-purple flex1 copyBtn" data-slot="2">&#128203; Copy</button>
+                <button class="btn btn-purple flex1 copyBtn" data-slot="2">&#128203; <span data-i18n="ui_copy">Copy</span></button>
                 <select class="select ml4 formatSelect" id="fmt2" style="width:90px;">
                     <option value="default">Default</option>
                     <option value="ox">OX</option>
                     <option value="emotes">Emotes</option>
                 </select>
-                <button class="btn btn-grey ml4 quickCopyBtn" data-slot="2" title="Aktuelle Werte kopieren" style="min-width:36px;">&#9889;</button>
+                <button class="btn btn-grey ml4 quickCopyBtn" data-slot="2" data-i18n-title="ui_quickcopy_title" title="Aktuelle Werte kopieren" style="min-width:36px;">&#9889;</button>
             </div>
         </div>
     </div>
@@ -280,22 +280,43 @@
     <!-- Gespeicherte Presets -->
     <div class="section">
         <div class="section-title presets-toggle" id="presetsToggle">
-            &#128190; Gespeicherte Presets <span id="presetsArrow">&#9660;</span>
+            &#128190; <span data-i18n="ui_presets">Gespeicherte Presets</span> <span id="presetsArrow">&#9660;</span>
         </div>
         <div id="presetsList" class="preset-list"></div>
     </div>
 
     <!-- Save & Reset All -->
     <div class="section">
-        <div class="section-title">Speichern</div>
-        <input id="saveName"  class="input"    placeholder="Name (z.B. jerrycan_pour)">
-        <input id="saveNotes" class="input mt4" placeholder="Notiz (optional)">
-        <div class="row mt4">
-            <button id="btnSave"     class="btn btn-purple flex1">&#128190; Eintrag speichern</button>
+        <div class="section-title" data-i18n="ui_save">Speichern</div>
+        <input id="saveName"  class="input"     data-i18n-ph="ui_name_ph"  placeholder="Name (z.B. jerrycan_pour)">
+        <input id="saveNotes" class="input mt4" data-i18n-ph="ui_notes_ph" placeholder="Notiz (optional)">
+        <div class="row mt4" style="align-items:center; gap:6px;">
+            <label style="min-width:64px;" data-i18n="ui_save_slot">Aus Slot:</label>
+            <select id="saveSlot" class="select" style="width:70px;">
+                <option value="1">1</option>
+                <option value="2">2</option>
+            </select>
+            <button id="btnSave" class="btn btn-purple flex1">&#128190; <span data-i18n="ui_save_entry">Eintrag speichern</span></button>
         </div>
-        <div class="row mt4">
-            <button id="btnExport"   class="btn btn-blue   flex1">&#128196; Lua Export</button>
-            <button id="btnResetAll" class="btn btn-red    flex1 ml4">&#128260; Reset All</button>
+        <div class="row mt4" style="gap:6px;">
+            <select id="exportFmt" class="select" style="width:130px;">
+                <option value="lua" data-i18n="ui_export_fmt_lua">Lua Tabelle</option>
+                <option value="ox"  data-i18n="ui_export_fmt_ox">ox_inventory Items</option>
+            </select>
+            <button id="btnExport"   class="btn btn-blue flex1">&#128196; <span data-i18n="ui_export">Export</span></button>
+            <button id="btnResetAll" class="btn btn-red  flex1">&#128260; <span data-i18n="ui_reset_all">Reset All</span></button>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div id="modal" class="modal-backdrop">
+        <div class="modal">
+            <div class="modal-title" id="modalTitle" data-i18n="ui_confirm">Bestaetigen</div>
+            <div class="modal-text" id="modalText"></div>
+            <div class="row mt4">
+                <button id="modalCancel" class="btn btn-grey flex1" data-i18n="ui_cancel">Abbrechen</button>
+                <button id="modalOk" class="btn btn-red flex1 ml4" data-i18n="ui_ok">OK</button>
+            </div>
         </div>
     </div>
 

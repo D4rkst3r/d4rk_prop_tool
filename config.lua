@@ -1,13 +1,32 @@
 Config = {}
 
-Config.Command       = 'ptool'
-Config.OnlyAdmins    = false   -- true = nur ACE permission 'd4rk_prop_tool.use'
+Config.Command = 'ptool'
+Config.Locale  = 'de'          -- 'de' | 'en'
+
+-- false = Dev-Tool-Modus: jeder auf dem Server darf das Tool nutzen.
+-- true  = UI und Schreibzugriffe (Presets, Export) verlangen die ACE unten.
+--
+-- Auf true setzen, sobald die Resource auf einem Server mit echten Spielern
+-- laeuft: die Callbacks schreiben Dateien auf dem Server, und ohne ACE kann
+-- das jeder Client ausloesen.
+Config.RequireAce = false
+
+-- Vergeben mit:  add_ace group.admin d4rk_prop_tool.use allow
+Config.AcePermission = 'd4rk_prop_tool.use'
 
 Config.DefaultMoveSpeed   = 0.01
 Config.DefaultRotateSpeed = 1.0
 
 Config.MoveSpeeds   = { 0.001, 0.005, 0.01, 0.05, 0.1 }
 Config.RotateSpeeds = { 0.5, 1.0, 5.0, 10.0, 45.0 }
+
+-- Schrittweiten fuer die Numpad-Hotkeys (ADD / SUBTRACT)
+Config.MoveStepLevels   = { 0.001, 0.01, 0.1, 1.0 }
+Config.RotateStepLevels = { 0.1, 1.0, 5.0, 15.0 }
+
+-- Default-Bone beim Start (muss in Config.Bones existieren)
+Config.DefaultBoneSlot1 = 28422   -- PH_R_Hand
+Config.DefaultBoneSlot2 = 60309   -- PH_L_Hand
 
 Config.Props = {
     -- Food & Drinks
@@ -98,32 +117,42 @@ Config.Props = {
 }
 
 Config.Animations = {
-    { label = 'Eat Burger',    dict = 'mp_player_inteat@burger',              anim = 'mp_player_int_eat_burger',   flags = 49 },
-    { label = 'Drink Cup',     dict = 'mp_player_intdrink',                   anim = 'loop_bottle',                flags = 49 },
-    { label = 'Hold Phone',    dict = 'cellphone@',                           anim = 'cellphone_call_listen_base', flags = 49 },
-    { label = 'Smoke',         dict = 'amb@world_human_smoking@male@idle_a',  anim = 'idle_a',                    flags = 49 },
-    { label = 'Sweep Broom',   dict = 'anim@amb@drug_field_workers@rake@male_b@base', anim = 'base',              flags = 49 },
-    { label = 'Idle (Stand)',  dict = 'anim@amb@casino@bball@idle@male',      anim = 'idle_a',                    flags = 49 },
-    { label = 'Look At Phone', dict = 'cellphone@',                           anim = 'cellphone_text_in',         flags = 49 },
-    { label = 'Drink Bottle',  dict = 'mp_player_intdrink',                   anim = 'loop_bottle',               flags = 49 },
-    { label = 'Carry Box',      dict = 'anim@heists@box_carry@',                  anim = 'idle',                      flags = 49 },
-    { label = 'Hold Clipboard', dict = 'missfbi3_carmeet',                        anim = 'carmeet_idlea_worker',      flags = 49 },
-    { label = 'Hold Light',     dict = 'anim@heists@ornate_bank@grab_cash',        anim = 'idle',                      flags = 49 },
-    { label = 'Carry Bag',      dict = 'anim@mp_bag_var10_lrgchngbag@',            anim = 'idle',                      flags = 49 },
+    { label = 'Eat Burger',     dict = 'mp_player_inteat@burger',                     anim = 'mp_player_int_eat_burger',   flags = 49 },
+    { label = 'Drink Cup',      dict = 'mp_player_intdrink',                          anim = 'loop_bottle',                flags = 49 },
+    { label = 'Hold Phone',     dict = 'cellphone@',                                  anim = 'cellphone_call_listen_base', flags = 49 },
+    { label = 'Smoke',          dict = 'amb@world_human_smoking@male@idle_a',         anim = 'idle_a',                     flags = 49 },
+    { label = 'Sweep Broom',    dict = 'anim@amb@drug_field_workers@rake@male_b@base', anim = 'base',                      flags = 49 },
+    { label = 'Idle (Stand)',   dict = 'anim@amb@casino@bball@idle@male',             anim = 'idle_a',                     flags = 49 },
+    { label = 'Look At Phone',  dict = 'cellphone@',                                  anim = 'cellphone_text_in',          flags = 49 },
+    { label = 'Drink Bottle',   dict = 'mp_player_intdrink',                          anim = 'loop_bottle',                flags = 49 },
+    { label = 'Carry Box',      dict = 'anim@heists@box_carry@',                      anim = 'idle',                       flags = 49 },
+    { label = 'Hold Clipboard', dict = 'missfbi3_carmeet',                            anim = 'carmeet_idlea_worker',       flags = 49 },
+    { label = 'Hold Light',     dict = 'anim@heists@ornate_bank@grab_cash',           anim = 'idle',                       flags = 49 },
+    { label = 'Carry Bag',      dict = 'anim@mp_bag_var10_lrgchngbag@',               anim = 'idle',                       flags = 49 },
 }
 
+-- Bone-IDs nach GTA-Skeleton. Aendern nur wenn du sie gegen ein aktuelles
+-- Bone-Dump geprueft hast - falsche IDs fallen still auf Bone 0 zurueck.
 Config.Bones = {
-    { name = 'SKEL_R_Hand',     id = 57005 },
-    { name = 'SKEL_L_Hand',     id = 18905 },
-    { name = 'SKEL_R_Forearm',  id = 28252 },
-    { label = 'SKEL_L_Forearm', name = 'SKEL_L_Forearm', id = 61163 },
-    { name = 'SKEL_Spine2',     id = 24817 },
-    { name = 'SKEL_R_UpperArm', id = 40269 },
-    { name = 'SKEL_L_UpperArm', id = 45509 },
-    { name = 'IK_R_Hand',       id = 6286  },
-    { name = 'IK_L_Hand',       id = 36029 },
     { name = 'PH_R_Hand',       id = 28422 },
     { name = 'PH_L_Hand',       id = 60309 },
+    { name = 'SKEL_R_Hand',     id = 57005 },
+    { name = 'SKEL_L_Hand',     id = 18905 },
+    { name = 'IK_R_Hand',       id = 6286  },
+    { name = 'IK_L_Hand',       id = 36029 },
+    { name = 'SKEL_R_Forearm',  id = 61163 },
+    { name = 'SKEL_L_Forearm',  id = 22711 },
+    { name = 'SKEL_R_UpperArm', id = 40269 },
+    { name = 'SKEL_L_UpperArm', id = 45509 },
+    { name = 'SKEL_R_Clavicle', id = 10706 },
+    { name = 'SKEL_L_Clavicle', id = 64729 },
+    { name = 'SKEL_Spine2',     id = 24817 },
+    { name = 'SKEL_Spine3',     id = 24818 },
     { name = 'SKEL_Head',       id = 31086 },
+    { name = 'SKEL_Neck_1',     id = 39317 },
     { name = 'SKEL_Pelvis',     id = 11816 },
+    { name = 'SKEL_R_Thigh',    id = 51826 },
+    { name = 'SKEL_L_Thigh',    id = 58271 },
+    { name = 'SKEL_R_Foot',     id = 52301 },
+    { name = 'SKEL_L_Foot',     id = 14201 },
 }
