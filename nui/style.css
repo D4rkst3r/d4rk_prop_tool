@@ -446,3 +446,52 @@ input[type="range"] {
 .mb4   { margin-bottom: 4px; }
 .ml4   { margin-left: 4px; }
 .mr8   { margin-right: 8px; }
+.btn-preset-del {
+    background: #6a1a1a;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 3px;
+    min-width: 28px;
+}
+.btn-preset-del:hover { filter: brightness(1.25); }
+
+/* ─── Disabled ──────────────────────────── */
+button:disabled,
+button[disabled] {
+    opacity: 0.4;
+    cursor: not-allowed;
+    filter: none !important;
+}
+
+/* ─── Confirm Modal ─────────────────────── */
+.modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 999;
+    align-items: center;
+    justify-content: center;
+}
+.modal-backdrop.open { display: flex; }
+
+.modal {
+    background: #1c1c22;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 6px;
+    padding: 14px 16px;
+    width: 300px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.6);
+}
+.modal-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #eee;
+    margin-bottom: 8px;
+}
+.modal-text {
+    font-size: 12px;
+    color: #bbb;
+    line-height: 1.5;
+    word-break: break-word;
+}

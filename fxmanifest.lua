@@ -5,15 +5,14 @@ lua54 'yes'
 name        'd4rk_prop_tool'
 description 'Prop Attachment & Animation Testing Tool fuer FiveM-Entwickler'
 author      'd4rk'
-version     '2.0.0'
+version     '2.1.0'
 
 shared_scripts {
+    '@ox_lib/init.lua',
     'config.lua',
 }
 
 client_scripts {
-    '@ox_lib/init.lua',
-    'client/dataview.lua',
     'client/main.lua',
 }
 
@@ -27,7 +26,7 @@ files {
     'nui/index.html',
     'nui/style.css',
     'nui/script.js',
-    'data/attachments.json',
+    'locales/*.json',
 }
 
 dependencies {
