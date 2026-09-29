@@ -65,9 +65,10 @@ In der `server.cfg` **nach** `d4rk_animation`.
   Entwicklerwerkzeug, nicht umgebaut.
 - Meldungen laufen über `lib.notify` im ox-Design, nicht über das
   d4rk-Meldungsdesign.
-- **Zwei Fäden laufen auch im Leerlauf** (`client/main.lua`): die
-  Kamera-Nachführung prüft alle 250 ms, ob die UI offen ist, die
-  Tastensteuerung alle 150 ms, ob eine Taste gehalten wird. Klein, aber nicht
-  die 0,00 ms, die das Projekt verlangt. Sauber wäre: beide Fäden erst beim
-  Öffnen bzw. beim ersten Tastendruck starten und danach enden lassen.
-  **Nicht gemessen** (`resmon`) — offen.
+
+## Leerlauf
+
+Seit dem 29.09.2026 läuft im Leerlauf **kein Faden**: die Kamera-Nachführung
+startet mit der Kamera (beim Öffnen) und endet mit ihr, die Tastensteuerung
+startet beim ersten gehaltenen Numpad-Knopf und endet, wenn keiner mehr
+gehalten wird. Vorher prüften beide dauerhaft (250 ms / 150 ms).
