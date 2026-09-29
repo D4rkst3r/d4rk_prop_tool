@@ -66,6 +66,8 @@ function closeModal(result) {
 }
 
 $('modalOk').addEventListener('click', () => closeModal(true));
+// d4rk RP: Werte beider Plaetze in den Animationskatalog schreiben
+$('btnKatalog').addEventListener('click', () => send('katalogSpeichern', {}));
 $('modalCancel').addEventListener('click', () => closeModal(false));
 modalEl.addEventListener('click', (e) => { if (e.target === modalEl) closeModal(false); });
 
@@ -341,7 +343,17 @@ window.addEventListener('message', (e) => {
 
         case 'hideUI':
             $('app').style.display = 'none';
+            $('katalogBox').style.display = 'none';
             closeModal(false);
+            break;
+
+        // d4rk RP: ein Katalogeintrag wird eingestellt
+        case 'katalog':
+            $('katalogBox').style.display = '';
+            $('katalogName').textContent = d.label || d.key || '';
+            if (d.dict) $('customDict').value = d.dict;
+            if (d.clip) $('customAnim').value = d.clip;
+            if (d.flags !== undefined) $('animFlags').value = d.flags;
             break;
 
         case 'clipboard':

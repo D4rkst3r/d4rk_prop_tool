@@ -357,6 +357,7 @@ end
 -- ─────────────────────────────────────────────
 
 local UI_KEYS = {
+    'ui_katalog', 'ui_katalog_speichern',
     'ui_title', 'ui_close', 'ui_animations', 'ui_custom_dict', 'ui_custom_anim', 'ui_flags',
     'ui_play', 'ui_stop', 'ui_speed', 'ui_move', 'ui_rotate', 'ui_camera', 'ui_focus',
     'ui_focus_ped', 'ui_focus_prop1', 'ui_focus_prop2', 'ui_distance', 'ui_angle', 'ui_height',
@@ -414,11 +415,15 @@ local function openUI()
     uiOpen = true
 end
 
+--- d4rk RP: welcher Katalogeintrag gerade eingestellt wird (nil = keiner)
+local katalog = nil
+
 local function closeUI()
     SetNuiFocus(false, false)
     SendNUIMessage({ type = 'hideUI' })
     stopCamera()
     uiOpen = false
+    katalog = nil
 end
 
 -- ─────────────────────────────────────────────
@@ -436,6 +441,86 @@ local function slotCallback(name, fn)
 end
 
 RegisterNUICallback('closeUI', function(_, cb) closeUI() cb({}) end)
+
+--[[
+    d4rk RP - DER KATALOG (Animationsmenue, Paragraph 10, 29.09.2026).
+
+    d4rk_animation ruft KatalogOeffnen mit einem Eintrag:
+      { key, label, dict, clip, flag, plaetze = { [1]={model,boneId,rotOrder,offset,rotation}, [2]=... } }
+    Das Tool spielt die Animation, haengt die Gegenstaende mit den Katalogwerten
+    an und zeigt oben "Katalog: <Name>" samt Knopf. Der Knopf schickt beide
+    Plaetze an d4rk_animation:PropSetzen - der Server prueft dort das Recht.
+]]
+exports('KatalogOeffnen', function(e)
+    if type(e) ~= 'table' or type(e.key) ~= 'string' then return false end
+
+    CreateThread(function()
+        -- Wie der Befehl: erst Rechte und Voreinstellungen, dann oeffnen.
+        -- refreshPermissions wartet auf den Server, deshalb im Faden.
+        refreshPermissions()
+        if not canRead then
+            notify(locale('no_access'), 'error')
+            return
+        end
+        if not uiOpen then
+            loadAttachments()
+            openUI()
+        end
+        katalog = { key = e.key, label = e.label or e.key }
+
+        for slot = 1, 2 do
+            local q = e.plaetze and e.plaetze[slot]
+            if hasProp(slot) then deleteProp(slot) end
+            if type(q) == 'table' and (q.model or '') ~= '' then
+                local p = props[slot]
+                p.boneId   = tonumber(q.boneId) or p.boneId
+                p.bone     = boneName(p.boneId)
+                p.rotOrder = tonumber(q.rotOrder) or 1
+                p.offset   = { x = q.offset.x + 0.0, y = q.offset.y + 0.0, z = q.offset.z + 0.0 }
+                p.rotation = { x = q.rotation.x + 0.0, y = q.rotation.y + 0.0, z = q.rotation.z + 0.0 }
+                clearHistory(slot)
+                if not spawnPropEntity(slot, q.model) then
+                    toast(locale('invalid_model'):format(q.model), 'error')
+                end
+            end
+            syncSlot(slot)
+        end
+
+        if requestAnimDict(e.dict) then
+            stopAnim()
+            TaskPlayAnim(cache.ped, e.dict, e.clip, 8.0, -8.0, -1, tonumber(e.flag) or 49, 0, false, false, false)
+            currentAnim = { dict = e.dict, clip = e.clip }
+        end
+
+        SendNUIMessage({ type = 'katalog', key = e.key, label = katalog.label, dict = e.dict, clip = e.clip, flags = e.flag })
+    end)
+    return true
+end)
+
+RegisterNUICallback('katalogSpeichern', function(_, cb)
+    cb({})
+    if not katalog then return end
+    local plaetze = {}
+    for slot = 1, 2 do
+        if hasProp(slot) then
+            local p = props[slot]
+            plaetze[slot] = {
+                model = p.model, boneId = p.boneId, rotOrder = p.rotOrder,
+                offset = { x = p.offset.x, y = p.offset.y, z = p.offset.z },
+                rotation = { x = p.rotation.x, y = p.rotation.y, z = p.rotation.z },
+            }
+        end
+    end
+    local key = katalog.key
+    CreateThread(function()
+        local erg = lib.callback.await('d4rk_prop_tool:katalogSpeichern', false, key, plaetze)
+        if type(erg) == 'table' and erg.ok then
+            toast(locale('katalog_gespeichert'):format(key), 'success')
+        else
+            toast(locale('katalog_fehler'):format(tostring(type(erg) == 'table' and erg.grund or 'server')), 'error')
+        end
+    end)
+end)
 
 slotCallback('spawnProp', function(slot, data)
     deleteProp(slot)

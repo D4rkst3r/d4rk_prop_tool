@@ -9,7 +9,9 @@ Config.Locale  = 'de'          -- 'de' | 'en'
 -- Auf true setzen, sobald die Resource auf einem Server mit echten Spielern
 -- laeuft: die Callbacks schreiben Dateien auf dem Server, und ohne ACE kann
 -- das jeder Client ausloesen.
-Config.RequireAce = false
+-- d4rk RP, 29.09.2026: AN - das Tool laeuft auf dem Server mit echten Spielern
+-- und schreibt ueber d4rk_animation in den Animationskatalog.
+Config.RequireAce = true
 
 -- Vergeben mit:  add_ace group.admin d4rk_prop_tool.use allow
 Config.AcePermission = 'd4rk_prop_tool.use'

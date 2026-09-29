@@ -94,5 +94,9 @@
     "ui_cancel": "Abbrechen",
     "ui_ok": "OK",
     "ui_confirm_overwrite": "Preset \"%s\" existiert bereits. Ueberschreiben?",
-    "ui_confirm_delete": "Preset \"%s\" wirklich loeschen?"
+    "ui_confirm_delete": "Preset \"%s\" wirklich loeschen?",
+    "ui_katalog": "Katalog",
+    "ui_katalog_speichern": "In Katalog übernehmen",
+    "katalog_gespeichert": "In den Katalog übernommen: %s",
+    "katalog_fehler": "Nicht übernommen: %s"
 }

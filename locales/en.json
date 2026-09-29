@@ -94,5 +94,9 @@
     "ui_cancel": "Cancel",
     "ui_ok": "OK",
     "ui_confirm_overwrite": "Preset \"%s\" already exists. Overwrite?",
-    "ui_confirm_delete": "Really delete preset \"%s\"?"
+    "ui_confirm_delete": "Really delete preset \"%s\"?",
+    "ui_katalog": "Catalog",
+    "ui_katalog_speichern": "Save to catalog",
+    "katalog_gespeichert": "Saved to catalog: %s",
+    "katalog_fehler": "Not saved: %s"
 }

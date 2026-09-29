@@ -17,7 +17,11 @@ client_scripts {
 }
 
 server_scripts {
+    -- d4rk RP: DarfAkteur, die EINE Rechtefrage des Projekts
+    '@d4rk_lib/server/akteur_shared.lua',
     'server/main.lua',
+    -- d4rk RP: im Dev-Reiter des Adminpanels anmelden
+    'server/panel.lua',
 }
 
 ui_page 'nui/index.html'
