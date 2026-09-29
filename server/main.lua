@@ -26,7 +26,10 @@ local attachmentCache = nil   -- validierte Attachments, im RAM gehalten
 
 local function allowed(src)
     if not Config.RequireAce then return true end
-    return IsPlayerAceAllowed(src, Config.AcePermission)
+    -- d4rk RP, 29.09.2026: IsPlayerAceAllowed antwortet hier mit 1 statt true,
+    -- und der Client prueft `== true` - so kam "Kein Zugriff" trotz Recht.
+    -- DarfAkteur (d4rk_lib/server/akteur_shared.lua) liefert ein echtes boolean.
+    return DarfAkteur(src, Config.AcePermission) == true
 end
 
 local canRead, canWrite = allowed, allowed

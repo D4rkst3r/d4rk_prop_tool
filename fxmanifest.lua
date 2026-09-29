@@ -17,6 +17,8 @@ client_scripts {
 }
 
 server_scripts {
+    -- d4rk RP: DarfAkteur, die EINE Rechtefrage des Projekts
+    '@d4rk_lib/server/akteur_shared.lua',
     'server/main.lua',
 }
 
