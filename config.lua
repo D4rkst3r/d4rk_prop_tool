@@ -13,7 +13,8 @@ Config.Locale  = 'de'          -- 'de' | 'en'
 -- und schreibt ueber d4rk_animation in den Animationskatalog.
 Config.RequireAce = true
 
--- Vergeben mit:  add_ace group.admin d4rk_prop_tool.use allow
+-- d4rk RP: vergeben ueber die Rechtematrix (d4rk_perms, Bereich animationen),
+-- nicht per add_ace in der server.cfg.
 Config.AcePermission = 'd4rk_prop_tool.use'
 
 Config.DefaultMoveSpeed   = 0.01
