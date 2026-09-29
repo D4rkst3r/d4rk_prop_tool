@@ -241,28 +241,22 @@ local function updateCamPosition()
     PointCamAtCoord(cam, target.x, target.y, target.z + 0.4)
 end
 
-local function startCamera()
-    if cam then return end
-    cam = CreateCam('DEFAULT_SCRIPTED_CAMERA', true)
-    SetCamActive(cam, true)
-    RenderScriptCams(true, true, 300, true, false)
-    updateCamPosition()
-end
+--[[
+    d4rk RP, 29.09.2026: KAMERA NACHFUEHREN + Live-Werte an die NUI - der Faden
+    laeuft NUR, solange es die Kamera gibt (sie lebt genau so lange wie die
+    offene UI). Vorher lief er dauerhaft und fragte im Leerlauf alle 250 ms
+    nach; das Projekt verlangt 0,00 ms, wenn niemand das Tool benutzt.
+]]
+local kameraFaden = false
 
-local function stopCamera()
-    if not cam then return end
-    RenderScriptCams(false, true, 300, true, false)
-    SetCamActive(cam, false)
-    DestroyCam(cam, false)
-    cam = nil
-end
-
--- Kamera nachfuehren + Live-Werte an die NUI, nur solange die UI offen ist.
-CreateThread(function()
-    local tick = 0
-    while true do
-        if uiOpen and cam then
+local function kameraNachfuehren()
+    if kameraFaden then return end
+    kameraFaden = true
+    CreateThread(function()
+        local tick = 0
+        while cam do
             Wait(0)
+            if not cam then break end
             updateCamPosition()
             tick = tick + 1
             if tick >= 6 then
@@ -274,12 +268,28 @@ CreateThread(function()
                     prop2 = { offset = p2.offset, rotation = p2.rotation },
                 })
             end
-        else
-            Wait(250)
-            tick = 0
         end
-    end
-end)
+        kameraFaden = false
+    end)
+end
+
+local function startCamera()
+    if cam then return end
+    cam = CreateCam('DEFAULT_SCRIPTED_CAMERA', true)
+    SetCamActive(cam, true)
+    RenderScriptCams(true, true, 300, true, false)
+    updateCamPosition()
+    kameraNachfuehren()
+end
+
+local function stopCamera()
+    if not cam then return end
+    RenderScriptCams(false, true, 300, true, false)
+    SetCamActive(cam, false)
+    DestroyCam(cam, false)
+    cam = nil
+end
+
 
 -- ─────────────────────────────────────────────
 --  Daten (Server)
@@ -775,6 +785,8 @@ local AXES = {
 local holdState = {}
 for name in pairs(AXES) do holdState[name] = { pressed = false, holdTime = 0 } end
 local heldCount = 0
+local halteFaden = false
+local halteStarten  -- unten definiert, von onPressed gerufen
 
 local function accel(ms)
     if ms < 400  then return 1.0 end
@@ -793,6 +805,7 @@ for name, axis in pairs(AXES) do
             holdState[name].pressed  = true
             holdState[name].holdTime = 0
             heldCount = heldCount + 1
+            halteStarten()
         end,
         onReleased = function()
             if not holdState[name].pressed then return end
@@ -828,14 +841,18 @@ lib.addKeybind({ name = 'ptool_step_down', description = 'Prop Tool - Schritt -'
         applyStep()
     end })
 
--- Laeuft nur auf Wait(0), solange wirklich eine Taste gehalten wird.
-CreateThread(function()
-    local lastFrame = GetGameTimer()
-    while true do
-        if uiOpen or heldCount == 0 then
-            Wait(150)
-            lastFrame = GetGameTimer()
-        else
+--[[
+    Laeuft nur auf Wait(0), solange wirklich eine Taste gehalten wird - und
+    d4rk RP, 29.09.2026: sonst GAR NICHT. Vorher fragte der Faden dauerhaft
+    alle 150 ms nach; jetzt startet ihn der erste Tastendruck und er endet,
+    wenn keine mehr gehalten wird (oder die UI aufgeht).
+]]
+halteStarten = function()
+    if halteFaden then return end
+    halteFaden = true
+    CreateThread(function()
+        local lastFrame = GetGameTimer()
+        while heldCount > 0 and not uiOpen do
             Wait(0)
             local now = GetGameTimer()
             local dt  = math.min(now - lastFrame, 100)
@@ -853,8 +870,9 @@ CreateThread(function()
             end
             if changed then attachProp(1) end
         end
-    end
-end)
+        halteFaden = false
+    end)
+end
 
 -- ─────────────────────────────────────────────
 --  Exports fuer andere Resourcen
