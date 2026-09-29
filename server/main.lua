@@ -219,6 +219,30 @@ end
 --  Callbacks
 -- ─────────────────────────────────────────────
 
+-- ─────────────────────────────────────────────
+--  d4rk RP: Recht anmelden und in den Animationskatalog schreiben
+-- ─────────────────────────────────────────────
+
+-- Neues meldet seine Rechte an (d4rk RP CLAUDE.md) - sonst steht der Knoten
+-- nicht in der Rechtematrix und niemand kann ihn vergeben.
+CreateThread(function()
+    if GetResourceState('d4rk_perms') ~= 'started' then return end
+    pcall(function()
+        exports.d4rk_perms:RechtAnmelden(Config.AcePermission, 'Prop-Tool benutzen', 'animationen')
+    end)
+end)
+
+-- Die Werte eines Katalogeintrags zurueckschreiben. Das Tool prueft sein
+-- eigenes Recht, d4rk_animation prueft danach das KATALOGRECHT selbst.
+lib.callback.register('d4rk_prop_tool:katalogSpeichern', function(src, key, plaetze)
+    if not canWrite(src) then return { ok = false, grund = 'no_write_access' } end
+    if onCooldown(saveCooldowns, src, SAVE_COOLDOWN) then return { ok = false, grund = 'cooldown' } end
+    if GetResourceState('d4rk_animation') ~= 'started' then return { ok = false, grund = 'kein_katalog' } end
+    local ok, erg = pcall(function() return exports.d4rk_animation:PropSetzen(src, key, plaetze) end)
+    if not ok or type(erg) ~= 'table' then return { ok = false, grund = 'kein_katalog' } end
+    return erg
+end)
+
 lib.callback.register('d4rk_prop_tool:canUse', function(src)
     return canRead(src), canWrite(src)
 end)
