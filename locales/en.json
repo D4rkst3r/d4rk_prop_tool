@@ -98,5 +98,15 @@
     "ui_katalog": "Catalog",
     "ui_katalog_speichern": "Save to catalog",
     "katalog_gespeichert": "Saved to catalog: %s",
-    "katalog_fehler": "Not saved: %s"
+    "katalog_fehler": "Not saved: %s",
+    "katalog_grund_cooldown": "Too fast – wait a moment and try again.",
+    "katalog_grund_db": "The database did not save.",
+    "katalog_grund_kein_katalog": "The animation catalog is not running.",
+    "katalog_grund_kein_recht": "You lack the permission to change the catalog.",
+    "katalog_grund_keine_werte": "No values arrived.",
+    "katalog_grund_modell": "A model name is invalid.",
+    "katalog_grund_no_write_access": "You lack the prop tool permission.",
+    "katalog_grund_server": "The server did not answer.",
+    "katalog_grund_unbekannt": "This entry no longer exists in the catalog.",
+    "katalog_grund_zahl": "A value is out of range (offset ±5 m, rotation ±360°)."
 }

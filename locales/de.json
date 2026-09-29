@@ -98,5 +98,15 @@
     "ui_katalog": "Katalog",
     "ui_katalog_speichern": "In Katalog übernehmen",
     "katalog_gespeichert": "In den Katalog übernommen: %s",
-    "katalog_fehler": "Nicht übernommen: %s"
+    "katalog_fehler": "Nicht übernommen: %s",
+    "katalog_grund_cooldown": "Zu schnell – kurz warten und noch einmal.",
+    "katalog_grund_db": "Die Datenbank hat nicht gespeichert.",
+    "katalog_grund_kein_katalog": "Der Animationskatalog läuft gerade nicht.",
+    "katalog_grund_kein_recht": "Dir fehlt das Recht, den Katalog zu ändern.",
+    "katalog_grund_keine_werte": "Es kamen keine Werte an.",
+    "katalog_grund_modell": "Ein Modellname ist ungültig.",
+    "katalog_grund_no_write_access": "Dir fehlt das Recht für das Prop-Tool.",
+    "katalog_grund_server": "Der Server hat nicht geantwortet.",
+    "katalog_grund_unbekannt": "Den Eintrag gibt es im Katalog nicht mehr.",
+    "katalog_grund_zahl": "Ein Wert liegt außerhalb der Grenzen (Versatz ±5 m, Drehung ±360°)."
 }

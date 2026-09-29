@@ -517,7 +517,12 @@ RegisterNUICallback('katalogSpeichern', function(_, cb)
         if type(erg) == 'table' and erg.ok then
             toast(locale('katalog_gespeichert'):format(key), 'success')
         else
-            toast(locale('katalog_fehler'):format(tostring(type(erg) == 'table' and erg.grund or 'server')), 'error')
+            -- Der Grund als TEXT, nicht als Code ("Nicht uebernommen: zahl").
+            -- Ein unbekannter Code bleibt sichtbar statt zu verschwinden.
+            local g = tostring(type(erg) == 'table' and erg.grund or 'server')
+            local text = locale('katalog_grund_' .. g)
+            if not text or text == 'katalog_grund_' .. g then text = g end
+            toast(locale('katalog_fehler'):format(text), 'error')
         end
     end)
 end)
